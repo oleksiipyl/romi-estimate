@@ -6,12 +6,12 @@
   <title>Glass Price Calculator — Fast Glass & Windows</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    .fraction-btn { min-width: 48px; min-height: 44px; }
-    .service-card { transition: all 0.15s; cursor: pointer; }
-    .service-card:hover { transform: translateY(-1px); }
-    .service-card.selected { border-color: #2563EB; background: #EFF6FF; }
+    .cat-btn, .svc-btn { transition: all 0.15s; cursor: pointer; }
+    .cat-btn.active { background: #2563EB; color: white; border-color: #2563EB; }
+    .svc-btn.active { background: #EFF6FF; border-color: #2563EB; color: #1D4ED8; }
     .result-box { animation: fadeIn 0.3s ease; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .step-num { width: 28px; height: 28px; }
   </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
@@ -21,159 +21,190 @@
     <div class="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
       <div>
         <h1 class="text-lg font-bold text-gray-900">🪟 Glass Price Calculator</h1>
-        <p class="text-xs text-gray-500">Fast Glass & Windows — Internal Tool</p>
+        <p class="text-xs text-gray-500">Fast Glass & Windows</p>
       </div>
       <a href="/admin" class="text-xs text-gray-400 hover:text-blue-600">Admin ⚙️</a>
     </div>
   </header>
 
-  <main class="max-w-2xl mx-auto px-4 py-6 space-y-6">
+  <main class="max-w-2xl mx-auto px-4 py-6 space-y-5">
 
-    <!-- STEP 1: Service Type -->
+    <!-- STEP 1: Category -->
     <section class="bg-white rounded-xl border border-gray-200 p-4">
-      <h2 class="font-semibold text-gray-800 mb-3">1. Glass Type</h2>
-      <div id="serviceList" class="space-y-2">
-        <div class="text-sm text-gray-400">Loading services...</div>
+      <div class="flex items-center gap-2 mb-3">
+        <div class="step-num rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">1</div>
+        <h2 class="font-semibold text-gray-800">Select Category</h2>
+      </div>
+      <div class="grid grid-cols-2 gap-2" id="categoryButtons">
+        <!-- filled by JS -->
       </div>
     </section>
 
-    <!-- STEP 2: Dimensions -->
-    <section class="bg-white rounded-xl border border-gray-200 p-4">
-      <h2 class="font-semibold text-gray-800 mb-4">2. Dimensions</h2>
+    <!-- STEP 2: Service Type (cascades from category) -->
+    <section class="bg-white rounded-xl border border-gray-200 p-4" id="serviceSection">
+      <div class="flex items-center gap-2 mb-3">
+        <div class="step-num rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">2</div>
+        <h2 class="font-semibold text-gray-800">Select Glass Type</h2>
+      </div>
+      <div class="text-sm text-gray-400" id="serviceButtons">← Select a category first</div>
+    </section>
 
-      <!-- Width -->
-      <div class="mb-4">
-        <label class="text-sm font-medium text-gray-700 mb-2 block">Width</label>
-        <div class="flex gap-2 items-center flex-wrap">
-          <div class="flex items-center gap-1">
-            <input type="number" id="widthFt" min="0" max="50" value="0"
-              class="w-16 text-center border border-gray-300 rounded-lg px-2 py-2 text-base">
-            <span class="text-sm text-gray-500">ft</span>
+    <!-- STEP 3: Dimensions -->
+    <section class="bg-white rounded-xl border border-gray-200 p-4">
+      <div class="flex items-center gap-2 mb-4">
+        <div class="step-num rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">3</div>
+        <h2 class="font-semibold text-gray-800">Dimensions</h2>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <!-- Width -->
+        <div>
+          <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">Width</label>
+          <div class="space-y-2">
+            <div class="flex items-center gap-2">
+              <input type="number" id="widthFt" min="0" max="50" value="0"
+                class="w-14 text-center border border-gray-300 rounded-lg px-1 py-2 text-base">
+              <span class="text-sm text-gray-500 font-medium">ft</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="number" id="widthIn" min="0" max="11" value="24"
+                class="w-14 text-center border border-gray-300 rounded-lg px-1 py-2 text-base">
+              <span class="text-sm text-gray-500 font-medium">in</span>
+            </div>
+            <select id="widthFrac" class="w-full border border-gray-300 rounded-lg px-2 py-2 text-sm">
+              <option value="0">+ 0"</option>
+              <option value="1/8">+ 1/8"</option>
+              <option value="1/4">+ 1/4"</option>
+              <option value="3/8">+ 3/8"</option>
+              <option value="1/2" selected>+ 1/2"</option>
+              <option value="5/8">+ 5/8"</option>
+              <option value="3/4">+ 3/4"</option>
+              <option value="7/8">+ 7/8"</option>
+            </select>
           </div>
-          <div class="flex items-center gap-1">
-            <input type="number" id="widthIn" min="0" max="11" value="24"
-              class="w-16 text-center border border-gray-300 rounded-lg px-2 py-2 text-base">
-            <span class="text-sm text-gray-500">in</span>
-          </div>
-          <div class="flex items-center gap-1">
-            <select id="widthFrac" class="border border-gray-300 rounded-lg px-2 py-2 text-base">
-              <option value="0">0</option>
-              <option value="1/8">1/8"</option>
-              <option value="1/4">1/4"</option>
-              <option value="3/8">3/8"</option>
-              <option value="1/2" selected>1/2"</option>
-              <option value="5/8">5/8"</option>
-              <option value="3/4">3/4"</option>
-              <option value="7/8">7/8"</option>
+        </div>
+
+        <!-- Height -->
+        <div>
+          <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">Height</label>
+          <div class="space-y-2">
+            <div class="flex items-center gap-2">
+              <input type="number" id="heightFt" min="0" max="50" value="0"
+                class="w-14 text-center border border-gray-300 rounded-lg px-1 py-2 text-base">
+              <span class="text-sm text-gray-500 font-medium">ft</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="number" id="heightIn" min="0" max="11" value="36"
+                class="w-14 text-center border border-gray-300 rounded-lg px-1 py-2 text-base">
+              <span class="text-sm text-gray-500 font-medium">in</span>
+            </div>
+            <select id="heightFrac" class="w-full border border-gray-300 rounded-lg px-2 py-2 text-sm">
+              <option value="0" selected>+ 0"</option>
+              <option value="1/8">+ 1/8"</option>
+              <option value="1/4">+ 1/4"</option>
+              <option value="3/8">+ 3/8"</option>
+              <option value="1/2">+ 1/2"</option>
+              <option value="5/8">+ 5/8"</option>
+              <option value="3/4">+ 3/4"</option>
+              <option value="7/8">+ 7/8"</option>
             </select>
           </div>
         </div>
       </div>
 
-      <!-- Height -->
-      <div class="mb-4">
-        <label class="text-sm font-medium text-gray-700 mb-2 block">Height</label>
-        <div class="flex gap-2 items-center flex-wrap">
-          <div class="flex items-center gap-1">
-            <input type="number" id="heightFt" min="0" max="50" value="0"
-              class="w-16 text-center border border-gray-300 rounded-lg px-2 py-2 text-base">
-            <span class="text-sm text-gray-500">ft</span>
-          </div>
-          <div class="flex items-center gap-1">
-            <input type="number" id="heightIn" min="0" max="11" value="36"
-              class="w-16 text-center border border-gray-300 rounded-lg px-2 py-2 text-base">
-            <span class="text-sm text-gray-500">in</span>
-          </div>
-          <div class="flex items-center gap-1">
-            <select id="heightFrac" class="border border-gray-300 rounded-lg px-2 py-2 text-base">
-              <option value="0" selected>0</option>
-              <option value="1/8">1/8"</option>
-              <option value="1/4">1/4"</option>
-              <option value="3/8">3/8"</option>
-              <option value="1/2">1/2"</option>
-              <option value="5/8">5/8"</option>
-              <option value="3/4">3/4"</option>
-              <option value="7/8">7/8"</option>
-            </select>
-          </div>
-        </div>
+      <!-- Live area preview -->
+      <div class="mt-3 bg-gray-50 rounded-lg px-3 py-2 text-sm text-gray-600" id="areaPreview">
+        Area: — sq ft
       </div>
 
       <!-- Quantity -->
-      <div>
-        <label class="text-sm font-medium text-gray-700 mb-2 block">Quantity (pieces)</label>
+      <div class="mt-3">
+        <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">Quantity (pieces)</label>
         <input type="number" id="quantity" min="1" max="100" value="1"
           class="w-24 text-center border border-gray-300 rounded-lg px-2 py-2 text-base">
       </div>
     </section>
 
-    <!-- STEP 3: Location -->
+    <!-- STEP 4: Location -->
     <section class="bg-white rounded-xl border border-gray-200 p-4">
-      <h2 class="font-semibold text-gray-800 mb-3">3. Location</h2>
-      <div class="flex gap-3 items-start">
-        <div class="flex-1">
-          <input type="text" id="zipCode" placeholder="ZIP Code (e.g. 90210)"
-            maxlength="5" pattern="[0-9]{5}"
-            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-base"
-            oninput="lookupZip(this.value)">
-          <div id="zipInfo" class="text-xs text-gray-500 mt-1"></div>
-        </div>
+      <div class="flex items-center gap-2 mb-3">
+        <div class="step-num rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">4</div>
+        <h2 class="font-semibold text-gray-800">Location (ZIP Code)</h2>
       </div>
+      <input type="text" id="zipCode" placeholder="e.g. 90210" maxlength="5" pattern="[0-9]{5}"
+        class="w-full border border-gray-300 rounded-lg px-3 py-3 text-base"
+        oninput="lookupZip(this.value)">
+      <div id="zipInfo" class="text-sm text-gray-500 mt-2 min-h-5"></div>
     </section>
 
-    <!-- STEP 4: Job Details -->
+    <!-- STEP 5: Job Details -->
     <section class="bg-white rounded-xl border border-gray-200 p-4">
-      <h2 class="font-semibold text-gray-800 mb-4">4. Job Details</h2>
+      <div class="flex items-center gap-2 mb-4">
+        <div class="step-num rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">5</div>
+        <h2 class="font-semibold text-gray-800">Job Details</h2>
+      </div>
 
       <!-- Floor -->
       <div class="mb-4">
-        <label class="text-sm font-medium text-gray-700 mb-2 block">Floor</label>
+        <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">Floor</label>
         <div class="flex gap-2 flex-wrap">
-          <button onclick="setFloor(1, this)" class="floor-btn px-4 py-2 rounded-lg border-2 border-blue-600 bg-blue-600 text-white text-sm font-medium">1st Floor</button>
-          <button onclick="setFloor(2, this)" class="floor-btn px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 text-sm font-medium">2nd Floor +$150</button>
-          <button onclick="setFloor(3, this)" class="floor-btn px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 text-sm font-medium">3rd+ Floor +$300</button>
+          <button onclick="setFloor(1,this)" class="floor-btn active px-4 py-2 rounded-lg border-2 border-blue-600 bg-blue-600 text-white text-sm font-medium">1st</button>
+          <button onclick="setFloor(2,this)" class="floor-btn px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 text-sm font-medium">2nd +$150</button>
+          <button onclick="setFloor(3,this)" class="floor-btn px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 text-sm font-medium">3rd+ +$300</button>
         </div>
       </div>
 
       <!-- Technicians -->
       <div class="mb-4">
-        <label class="text-sm font-medium text-gray-700 mb-2 block">Technicians Needed</label>
+        <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">Technicians</label>
         <div class="flex gap-2">
-          <button onclick="setTechs(1, this)" class="tech-btn px-4 py-2 rounded-lg border-2 border-blue-600 bg-blue-600 text-white text-sm font-medium">1</button>
-          <button onclick="setTechs(2, this)" class="tech-btn px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 text-sm font-medium">2</button>
-          <button onclick="setTechs(3, this)" class="tech-btn px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 text-sm font-medium">3</button>
+          <button onclick="setTechs(1,this)" class="tech-btn active px-5 py-2 rounded-lg border-2 border-blue-600 bg-blue-600 text-white text-sm font-bold">1</button>
+          <button onclick="setTechs(2,this)" class="tech-btn px-5 py-2 rounded-lg border-2 border-gray-300 text-gray-700 text-sm font-bold">2</button>
+          <button onclick="setTechs(3,this)" class="tech-btn px-5 py-2 rounded-lg border-2 border-gray-300 text-gray-700 text-sm font-bold">3</button>
         </div>
       </div>
 
       <!-- Urgency -->
-      <div class="mb-4">
-        <label class="text-sm font-medium text-gray-700 mb-2 block">Urgency</label>
-        <div class="flex gap-2 flex-wrap">
-          <button onclick="setUrgency('normal', this)" class="urgency-btn px-3 py-2 rounded-lg border-2 border-blue-600 bg-blue-600 text-white text-sm font-medium">Normal</button>
-          <button onclick="setUrgency('urgent', this)" class="urgency-btn px-3 py-2 rounded-lg border-2 border-gray-300 text-gray-700 text-sm font-medium">Same-Day +30%</button>
-          <button onclick="setUrgency('emergency', this)" class="urgency-btn px-3 py-2 rounded-lg border-2 border-gray-300 text-gray-700 text-sm font-medium">Emergency +50%</button>
+      <div>
+        <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">Urgency</label>
+        <div class="space-y-2">
+          <button onclick="setUrgency('normal',this)" class="urgency-btn active w-full text-left px-4 py-2 rounded-lg border-2 border-blue-600 bg-blue-600 text-white text-sm font-medium">
+            Standard (3–5 days)
+          </button>
+          <button onclick="setUrgency('urgent',this)" class="urgency-btn w-full text-left px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 text-sm font-medium">
+            Same-Day <span class="text-orange-500 font-bold">+30%</span>
+          </button>
+          <button onclick="setUrgency('emergency',this)" class="urgency-btn w-full text-left px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 text-sm font-medium">
+            Emergency / After Hours <span class="text-red-500 font-bold">+50%</span>
+          </button>
         </div>
       </div>
     </section>
 
-    <!-- STEP 5: Extras -->
+    <!-- STEP 6: Add-ons -->
     <section class="bg-white rounded-xl border border-gray-200 p-4">
-      <h2 class="font-semibold text-gray-800 mb-3">5. Additional Work</h2>
+      <div class="flex items-center gap-2 mb-3">
+        <div class="step-num rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">6</div>
+        <h2 class="font-semibold text-gray-800">Additional Work</h2>
+      </div>
       <div id="modifierList" class="space-y-2">
         <div class="text-sm text-gray-400">Loading...</div>
       </div>
     </section>
 
-    <!-- STEP 6: Notes -->
+    <!-- STEP 7: Notes -->
     <section class="bg-white rounded-xl border border-gray-200 p-4">
-      <h2 class="font-semibold text-gray-800 mb-3">6. Notes / Complexity</h2>
-      <textarea id="notes" rows="3" placeholder="e.g. Outside patio, need ladder, Beverly Hills estate, tight access..."
+      <div class="flex items-center gap-2 mb-3">
+        <div class="step-num rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">7</div>
+        <h2 class="font-semibold text-gray-800">Notes</h2>
+      </div>
+      <textarea id="notes" rows="2" placeholder="Outside patio, need ladder, tight access, Beverly Hills estate..."
         class="w-full border border-gray-300 rounded-lg px-3 py-2 text-base resize-none"></textarea>
     </section>
 
-    <!-- CALCULATE BUTTON -->
-    <button onclick="calculatePrice()"
-      class="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold py-4 px-6 rounded-xl text-lg transition-colors shadow-md">
+    <!-- CALCULATE -->
+    <button onclick="calculatePrice()" id="calcBtn"
+      class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-xl text-lg shadow-md transition-colors">
       💰 Calculate Price
     </button>
 
@@ -185,171 +216,184 @@
 
 <script>
   const API = '';
-  let selectedService = null;
+  let allServices = {};
+  let selectedServiceId = null;
   let selectedFloor = 1;
   let selectedTechs = 1;
   let selectedUrgency = 'normal';
   let selectedModifiers = [];
 
-  // Load services on page load
+  const CATEGORIES = [
+    { key: 'Residential', label: '🏠 Residential', icon: '🏠' },
+    { key: 'Commercial', label: '🏢 Commercial', icon: '🏢' },
+    { key: 'Window Tint', label: '🎨 Window Tint', icon: '🎨' },
+    { key: 'Auto Glass', label: '🚗 Auto Glass', icon: '🚗' },
+    { key: 'Shower & Mirror', label: '🚿 Shower/Mirror', icon: '🚿' },
+    { key: 'Specialty', label: '✨ Specialty', icon: '✨' },
+  ];
+
   async function loadServices() {
     try {
       const res = await fetch(`${API}/api/services`);
       const services = await res.json();
-
-      // Group by category
-      const grouped = {};
       services.forEach(s => {
-        if (!grouped[s.category]) grouped[s.category] = [];
-        grouped[s.category].push(s);
+        if (!allServices[s.category]) allServices[s.category] = [];
+        allServices[s.category].push(s);
       });
-
-      const container = document.getElementById('serviceList');
-      container.innerHTML = '';
-
-      // Show main categories first
-      const mainCats = ['Residential', 'Commercial', 'Window Tint', 'Auto Glass', 'Specialty', 'Shower & Mirror'];
-      mainCats.forEach(cat => {
-        if (!grouped[cat]) return;
-
-        const catDiv = document.createElement('div');
-        catDiv.innerHTML = `<p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-3 mb-1">${cat}</p>`;
-
-        const grid = document.createElement('div');
-        grid.className = 'grid grid-cols-1 gap-1';
-
-        grouped[cat].forEach(s => {
-          const card = document.createElement('div');
-          card.className = 'service-card border border-gray-200 rounded-lg px-3 py-2 flex items-center justify-between';
-          card.dataset.id = s.id;
-          card.innerHTML = `
-            <div>
-              <span class="text-sm font-medium text-gray-800">${s.name}</span>
-              <span class="text-xs text-gray-400 ml-2">${s.unit}</span>
-            </div>
-            <span class="text-sm text-blue-600 font-semibold">$${s.price_min}–$${s.price_max}</span>
-          `;
-          card.onclick = () => selectService(s.id, card);
-          grid.appendChild(card);
-        });
-
-        catDiv.appendChild(grid);
-        container.appendChild(catDiv);
-      });
-
-      // Auto-select first service
-      const first = container.querySelector('.service-card');
-      if (first) first.click();
-
+      renderCategories();
     } catch(e) {
-      document.getElementById('serviceList').innerHTML = '<div class="text-red-500 text-sm">Error loading services. Is the server running?</div>';
+      document.getElementById('categoryButtons').innerHTML = '<div class="text-red-500 text-sm col-span-2">Server not running. Start with: cd backend && python3 -m uvicorn main:app --port 8001</div>';
     }
   }
 
-  function selectService(id, card) {
-    document.querySelectorAll('.service-card').forEach(c => c.classList.remove('selected'));
-    card.classList.add('selected');
-    selectedService = id;
+  function renderCategories() {
+    const container = document.getElementById('categoryButtons');
+    container.innerHTML = '';
+    CATEGORIES.forEach(cat => {
+      if (!allServices[cat.key]) return;
+      const btn = document.createElement('button');
+      btn.className = 'cat-btn border-2 border-gray-200 rounded-xl px-3 py-3 text-sm font-medium text-gray-700 text-left';
+      btn.innerHTML = `<div class="text-xl mb-1">${cat.icon}</div><div>${cat.key}</div><div class="text-xs text-gray-400 mt-0.5">${allServices[cat.key].length} types</div>`;
+      btn.onclick = () => selectCategory(cat.key, btn);
+      container.appendChild(btn);
+    });
   }
 
-  // Load modifiers
+  function selectCategory(cat, btn) {
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderServices(cat);
+    selectedServiceId = null;
+  }
+
+  function renderServices(cat) {
+    const container = document.getElementById('serviceButtons');
+    container.innerHTML = '';
+    const services = allServices[cat] || [];
+    services.forEach(s => {
+      const btn = document.createElement('button');
+      btn.className = 'svc-btn w-full text-left border-2 border-gray-200 rounded-xl px-4 py-3 mb-2 transition-all';
+      btn.innerHTML = `
+        <div class="flex items-center justify-between">
+          <span class="font-medium text-gray-800 text-sm">${s.name}</span>
+          <span class="text-blue-600 font-bold text-sm ml-2 whitespace-nowrap">$${s.price_min}–$${s.price_max}<span class="text-gray-400 font-normal text-xs">/${s.unit.replace('per ','')}</span></span>
+        </div>
+        ${s.notes ? `<div class="text-xs text-gray-400 mt-0.5">${s.notes}</div>` : ''}
+      `;
+      btn.onclick = () => selectService(s.id, btn);
+      container.appendChild(btn);
+    });
+  }
+
+  function selectService(id, btn) {
+    document.querySelectorAll('.svc-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedServiceId = id;
+    // Scroll to dimensions
+    document.querySelector('section:nth-of-type(3)').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   async function loadModifiers() {
     try {
       const res = await fetch(`${API}/api/modifiers`);
       const mods = await res.json();
       const container = document.getElementById('modifierList');
       container.innerHTML = '';
-
       mods.forEach(m => {
-        const div = document.createElement('label');
-        div.className = 'flex items-center gap-3 py-1 cursor-pointer';
-        div.innerHTML = `
+        const label = document.createElement('label');
+        label.className = 'flex items-center gap-3 py-1.5 cursor-pointer border-b border-gray-100 last:border-0';
+        const priceLabel = m.price_type === 'per_sqft' ? `/sqft` : m.price_type === 'per_unit' ? `/ea` : '';
+        label.innerHTML = `
           <input type="checkbox" value="${m.id}" onchange="toggleModifier(${m.id}, this.checked)"
-            class="w-5 h-5 rounded border-gray-300 text-blue-600">
-          <div class="flex-1">
-            <span class="text-sm font-medium text-gray-800">${m.name}</span>
-            <span class="text-xs text-gray-500 ml-2">${m.description}</span>
+            class="w-5 h-5 rounded border-gray-300 text-blue-600 flex-shrink-0">
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-medium text-gray-800">${m.name}</div>
+            <div class="text-xs text-gray-400">${m.description}</div>
           </div>
-          <span class="text-sm text-gray-600">+$${m.price}${m.price_type === 'per_sqft' ? '/sqft' : m.price_type === 'per_unit' ? '/ea' : ''}</span>
+          <span class="text-sm font-medium text-gray-700 flex-shrink-0">+$${m.price}${priceLabel}</span>
         `;
-        container.appendChild(div);
+        container.appendChild(label);
       });
     } catch(e) {}
   }
 
   function toggleModifier(id, checked) {
-    if (checked) {
-      if (!selectedModifiers.includes(id)) selectedModifiers.push(id);
-    } else {
-      selectedModifiers = selectedModifiers.filter(m => m !== id);
+    if (checked) { if (!selectedModifiers.includes(id)) selectedModifiers.push(id); }
+    else { selectedModifiers = selectedModifiers.filter(m => m !== id); }
+  }
+
+  // Area preview
+  function updateArea() {
+    const wFt = parseInt(document.getElementById('widthFt').value)||0;
+    const wIn = parseInt(document.getElementById('widthIn').value)||0;
+    const wFr = document.getElementById('widthFrac').value;
+    const hFt = parseInt(document.getElementById('heightFt').value)||0;
+    const hIn = parseInt(document.getElementById('heightIn').value)||0;
+    const hFr = document.getElementById('heightFrac').value;
+    const fracMap = {'0':0,'1/8':0.125,'1/4':0.25,'3/8':0.375,'1/2':0.5,'5/8':0.625,'3/4':0.75,'7/8':0.875};
+    const w = wFt*12 + wIn + (fracMap[wFr]||0);
+    const h = hFt*12 + hIn + (fracMap[hFr]||0);
+    const qty = parseInt(document.getElementById('quantity').value)||1;
+    if (w > 0 && h > 0) {
+      const area = (w/12 * h/12 * qty).toFixed(2);
+      const wStr = `${wFt>0?wFt+'ft ':''}${wIn}"${wFr!='0'?' '+wFr+'"':''}`;
+      const hStr = `${hFt>0?hFt+'ft ':''}${hIn}"${hFr!='0'?' '+hFr+'"':''}`;
+      document.getElementById('areaPreview').textContent = `${wStr} × ${hStr}${qty>1?' × '+qty+' pcs':''} = ${area} sq ft`;
     }
   }
+  ['widthFt','widthIn','widthFrac','heightFt','heightIn','heightFrac','quantity'].forEach(id => {
+    document.getElementById(id).addEventListener('input', updateArea);
+    document.getElementById(id).addEventListener('change', updateArea);
+  });
 
-  // Floor buttons
-  function setFloor(floor, btn) {
-    selectedFloor = floor;
-    document.querySelectorAll('.floor-btn').forEach(b => {
-      b.className = 'floor-btn px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 text-sm font-medium';
-    });
-    btn.className = 'floor-btn px-4 py-2 rounded-lg border-2 border-blue-600 bg-blue-600 text-white text-sm font-medium';
+  // Floor / Tech / Urgency buttons
+  function setFloor(n, btn) {
+    selectedFloor = n;
+    document.querySelectorAll('.floor-btn').forEach(b => { b.classList.remove('active','bg-blue-600','text-white','border-blue-600'); b.classList.add('border-gray-300','text-gray-700'); });
+    btn.classList.add('active','bg-blue-600','text-white','border-blue-600'); btn.classList.remove('border-gray-300','text-gray-700');
   }
-
   function setTechs(n, btn) {
     selectedTechs = n;
-    document.querySelectorAll('.tech-btn').forEach(b => {
-      b.className = 'tech-btn px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 text-sm font-medium';
-    });
-    btn.className = 'tech-btn px-4 py-2 rounded-lg border-2 border-blue-600 bg-blue-600 text-white text-sm font-medium';
+    document.querySelectorAll('.tech-btn').forEach(b => { b.classList.remove('active','bg-blue-600','text-white','border-blue-600'); b.classList.add('border-gray-300','text-gray-700'); });
+    btn.classList.add('active','bg-blue-600','text-white','border-blue-600'); btn.classList.remove('border-gray-300','text-gray-700');
   }
-
   function setUrgency(u, btn) {
     selectedUrgency = u;
-    document.querySelectorAll('.urgency-btn').forEach(b => {
-      b.className = 'urgency-btn px-3 py-2 rounded-lg border-2 border-gray-300 text-gray-700 text-sm font-medium';
-    });
-    btn.className = 'urgency-btn px-3 py-2 rounded-lg border-2 border-blue-600 bg-blue-600 text-white text-sm font-medium';
+    document.querySelectorAll('.urgency-btn').forEach(b => { b.classList.remove('active','bg-blue-600','text-white','border-blue-600'); b.classList.add('border-gray-300','text-gray-700'); });
+    btn.classList.add('active','bg-blue-600','text-white','border-blue-600'); btn.classList.remove('border-gray-300','text-gray-700');
   }
 
   // ZIP lookup
   let zipTimer;
   async function lookupZip(zip) {
     clearTimeout(zipTimer);
-    if (zip.length !== 5) {
-      document.getElementById('zipInfo').textContent = '';
-      return;
-    }
+    if (zip.length !== 5) { document.getElementById('zipInfo').textContent = ''; return; }
     zipTimer = setTimeout(async () => {
       try {
         const res = await fetch(`${API}/api/zip/${zip}`);
-        const data = await res.json();
-        const mult = data.multiplier > 1 ? ` • ${Math.round((data.multiplier-1)*100)}% area markup` : '';
-        document.getElementById('zipInfo').textContent =
-          `📍 ${data.city} • ${data.travel_minutes} min drive${mult}`;
+        const d = await res.json();
+        const mult = d.multiplier > 1 ? ` • +${Math.round((d.multiplier-1)*100)}% area rate` : '';
+        document.getElementById('zipInfo').innerHTML = `📍 <strong>${d.city}</strong> • ~${d.travel_minutes} min drive${mult}`;
       } catch(e) {}
-    }, 500);
+    }, 600);
   }
 
-  // MAIN CALCULATE
+  // CALCULATE
   async function calculatePrice() {
-    if (!selectedService) {
-      alert('Please select a glass type first');
-      return;
-    }
-
-    const btn = document.querySelector('button[onclick="calculatePrice()"]');
-    btn.textContent = '⏳ Calculating...';
-    btn.disabled = true;
+    if (!selectedServiceId) { alert('Please select a glass type (Steps 1 & 2)'); return; }
+    const btn = document.getElementById('calcBtn');
+    btn.textContent = '⏳ Calculating...'; btn.disabled = true;
 
     const body = {
-      service_id: selectedService,
-      width_ft: parseInt(document.getElementById('widthFt').value) || 0,
-      width_in: parseInt(document.getElementById('widthIn').value) || 0,
+      service_id: selectedServiceId,
+      width_ft: parseInt(document.getElementById('widthFt').value)||0,
+      width_in: parseInt(document.getElementById('widthIn').value)||0,
       width_frac: document.getElementById('widthFrac').value,
-      height_ft: parseInt(document.getElementById('heightFt').value) || 0,
-      height_in: parseInt(document.getElementById('heightIn').value) || 0,
+      height_ft: parseInt(document.getElementById('heightFt').value)||0,
+      height_in: parseInt(document.getElementById('heightIn').value)||0,
       height_frac: document.getElementById('heightFrac').value,
-      quantity: parseInt(document.getElementById('quantity').value) || 1,
-      zip_code: document.getElementById('zipCode').value || '91324',
+      quantity: parseInt(document.getElementById('quantity').value)||1,
+      zip_code: document.getElementById('zipCode').value||'91324',
       floor: selectedFloor,
       num_technicians: selectedTechs,
       urgency: selectedUrgency,
@@ -358,96 +402,59 @@
     };
 
     try {
-      const res = await fetch(`${API}/api/calculate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || 'Calculation failed');
-      }
-
-      const data = await res.json();
-      showResult(data);
+      const res = await fetch(`${API}/api/calculate`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.detail); }
+      showResult(await res.json());
     } catch(e) {
-      document.getElementById('result').innerHTML = `
-        <div class="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700">
-          ❌ Error: ${e.message}
-        </div>`;
+      document.getElementById('result').innerHTML = `<div class="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm">❌ ${e.message}</div>`;
       document.getElementById('result').classList.remove('hidden');
     }
 
-    btn.textContent = '💰 Calculate Price';
-    btn.disabled = false;
-    document.getElementById('result').scrollIntoView({ behavior: 'smooth' });
+    btn.textContent = '💰 Calculate Price'; btn.disabled = false;
+    document.getElementById('result').scrollIntoView({ behavior:'smooth' });
   }
 
   function showResult(d) {
-    const notes = d.notes.filter(n => n).map(n => `<li class="text-sm">${n}</li>`).join('');
-
-    const html = `
+    const notes = d.notes.filter(n=>n).map(n=>`<li>${n}</li>`).join('');
+    document.getElementById('result').innerHTML = `
       <div class="result-box bg-white rounded-xl border-2 border-blue-600 p-5 shadow-md">
-        <div class="flex items-start justify-between mb-4">
-          <div>
-            <h3 class="font-bold text-gray-900 text-lg">${d.service_name}</h3>
-            <p class="text-sm text-gray-500">${d.total_area_sqft} sq ft • ${d.location || 'Local'}</p>
-          </div>
-          <div class="text-right">
-            <div class="text-2xl font-bold text-blue-600">$${d.grand_total_min.toLocaleString()} – $${d.grand_total_max.toLocaleString()}</div>
-            <div class="text-xs text-gray-400">incl. tax (10.25%)</div>
-          </div>
+        <div class="mb-1 text-sm text-gray-500">${d.service_name} • ${d.total_area_sqft} sqft • ${d.location||'Local'}</div>
+        <div class="text-3xl font-bold text-blue-600 mb-1">$${d.grand_total_min.toLocaleString()} – $${d.grand_total_max.toLocaleString()}</div>
+        <div class="text-xs text-gray-400 mb-4">includes LA tax 10.25%</div>
+
+        <div class="bg-gray-50 rounded-lg p-3 space-y-1.5 text-sm mb-4">
+          <div class="flex justify-between"><span class="text-gray-500">Material</span><span class="font-medium">$${d.breakdown.material_min.toFixed(0)} – $${d.breakdown.material_max.toFixed(0)}</span></div>
+          <div class="flex justify-between"><span class="text-gray-500">Labor</span><span class="font-medium">$${d.breakdown.labor_min.toFixed(0)} – $${d.breakdown.labor_max.toFixed(0)}</span></div>
+          ${d.breakdown.travel_cost>0?`<div class="flex justify-between"><span class="text-gray-500">Travel (${d.location})</span><span class="font-medium">$${d.breakdown.travel_cost.toFixed(0)}</span></div>`:''}
+          ${d.breakdown.floor_surcharge>0?`<div class="flex justify-between text-orange-600"><span>Floor surcharge</span><span>+$${d.breakdown.floor_surcharge}</span></div>`:''}
+          ${d.breakdown.extra_tech_cost>0?`<div class="flex justify-between text-orange-600"><span>Extra tech</span><span>+$${d.breakdown.extra_tech_cost.toFixed(0)}</span></div>`:''}
+          ${d.breakdown.modifiers_total>0?`<div class="flex justify-between"><span class="text-gray-500">Add-ons</span><span class="font-medium">$${d.breakdown.modifiers_total.toFixed(0)}</span></div>`:''}
+          ${d.breakdown.urgency_label?`<div class="flex justify-between text-orange-500"><span>${d.breakdown.urgency_label}</span></div>`:''}
+          <div class="border-t pt-1.5 flex justify-between font-semibold"><span>Subtotal</span><span>$${d.total_min.toFixed(0)} – $${d.total_max.toFixed(0)}</span></div>
+          <div class="flex justify-between text-gray-400 text-xs"><span>Tax 10.25%</span><span>$${d.tax_min.toFixed(0)} – $${d.tax_max.toFixed(0)}</span></div>
         </div>
 
-        <!-- Breakdown -->
-        <div class="bg-gray-50 rounded-lg p-3 mb-4 space-y-1 text-sm">
-          <div class="flex justify-between"><span class="text-gray-600">Material:</span><span class="font-medium">$${d.breakdown.material_min} – $${d.breakdown.material_max}</span></div>
-          <div class="flex justify-between"><span class="text-gray-600">Labor:</span><span class="font-medium">$${d.breakdown.labor_min} – $${d.breakdown.labor_max}</span></div>
-          ${d.breakdown.travel_cost > 0 ? `<div class="flex justify-between"><span class="text-gray-600">Travel:</span><span class="font-medium">$${d.breakdown.travel_cost}</span></div>` : ''}
-          ${d.breakdown.floor_surcharge > 0 ? `<div class="flex justify-between"><span class="text-gray-600">Floor surcharge:</span><span class="font-medium">$${d.breakdown.floor_surcharge}</span></div>` : ''}
-          ${d.breakdown.extra_tech_cost > 0 ? `<div class="flex justify-between"><span class="text-gray-600">Extra tech:</span><span class="font-medium">$${d.breakdown.extra_tech_cost}</span></div>` : ''}
-          ${d.breakdown.modifiers_total > 0 ? `<div class="flex justify-between"><span class="text-gray-600">Add-ons:</span><span class="font-medium">$${d.breakdown.modifiers_total.toFixed(2)}</span></div>` : ''}
-          ${d.breakdown.urgency_label ? `<div class="flex justify-between text-orange-600"><span>${d.breakdown.urgency_label}</span></div>` : ''}
-          <div class="border-t border-gray-200 pt-1 flex justify-between font-bold"><span>Before tax:</span><span>$${d.total_min} – $${d.total_max}</span></div>
-          <div class="flex justify-between text-gray-500"><span>Tax (10.25%):</span><span>$${d.tax_min} – $${d.tax_max}</span></div>
-        </div>
-
-        ${notes ? `<ul class="space-y-1 mb-4 text-gray-600">${notes}</ul>` : ''}
+        ${notes?`<ul class="text-sm text-gray-600 space-y-1 mb-4 list-none">${notes}</ul>`:''}
 
         <div class="flex gap-2">
-          <button onclick="window.print()" class="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">🖨️ Print</button>
-          <button onclick="copyEstimate(${JSON.stringify(d).replace(/"/g,'&quot;')})" class="flex-1 border border-blue-600 text-blue-600 py-2 rounded-lg text-sm font-medium hover:bg-blue-50">📋 Copy Text</button>
+          <button onclick="window.print()" class="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg text-sm font-medium">🖨️ Print</button>
+          <button onclick="copyResult()" class="flex-1 bg-blue-600 text-white py-2.5 rounded-lg text-sm font-medium">📋 Copy</button>
         </div>
-      </div>
-    `;
-
-    const resultEl = document.getElementById('result');
-    resultEl.innerHTML = html;
-    resultEl.classList.remove('hidden');
+      </div>`;
+    document.getElementById('result').classList.remove('hidden');
+    window._lastResult = d;
   }
 
-  function copyEstimate(d) {
-    const text = `ESTIMATE — ${d.service_name}
-Area: ${d.total_area_sqft} sqft
-Location: ${d.location}
-
-Material: $${d.breakdown.material_min} – $${d.breakdown.material_max}
-Labor: $${d.breakdown.labor_min} – $${d.breakdown.labor_max}
-${d.breakdown.travel_cost > 0 ? `Travel: $${d.breakdown.travel_cost}\n` : ''}TOTAL (before tax): $${d.total_min} – $${d.total_max}
-Tax: $${d.tax_min} – $${d.tax_max}
-GRAND TOTAL: $${d.grand_total_min} – $${d.grand_total_max}
-
-Fast Glass & Windows — 213-566-8886`;
-
-    navigator.clipboard.writeText(text).then(() => {
-      alert('Copied to clipboard!');
-    });
+  function copyResult() {
+    const d = window._lastResult;
+    if (!d) return;
+    const text = `ESTIMATE — ${d.service_name}\nArea: ${d.total_area_sqft} sqft | Location: ${d.location}\n\nMaterial: $${d.breakdown.material_min}–$${d.breakdown.material_max}\nLabor: $${d.breakdown.labor_min}–$${d.breakdown.labor_max}\n${d.breakdown.travel_cost>0?`Travel: $${d.breakdown.travel_cost}\n`:''}TOTAL (before tax): $${d.total_min}–$${d.total_max}\nTax (10.25%): $${d.tax_min}–$${d.tax_max}\nGRAND TOTAL: $${d.grand_total_min}–$${d.grand_total_max}\n\nFast Glass & Windows — 213-566-8886`;
+    navigator.clipboard.writeText(text).then(() => alert('Copied!'));
   }
 
-  // Init
   loadServices();
   loadModifiers();
+  updateArea();
 </script>
 </body>
 </html>
