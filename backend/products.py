@@ -621,3 +621,19 @@ CATEGORY_META = {
     "shower":      {"label": "🚿 Shower & Bath", "order": 3},
     "specialty":   {"label": "✨ Specialty",     "order": 4},
 }
+
+# Hardware products — added 2026-06-11
+HARDWARE_PRODUCTS = [
+    {"id": "hw_operator",   "label": "Window Operator / Crank", "description": "Casement/awning crank mechanism", "service_id": 60, "price_min": 85,  "price_max": 175},
+    {"id": "hw_balance",    "label": "Window Balance",          "description": "Spiral or block-and-tackle",     "service_id": 61, "price_min": 65,  "price_max": 135},
+    {"id": "hw_hardware",   "label": "Window Hardware Repair",  "description": "Locks, handles, hinges",          "service_id": 62, "price_min": 55,  "price_max": 110},
+    {"id": "hw_screen_new", "label": "Screen Replacement",      "description": "New fiberglass or aluminum mesh", "service_id": 63, "price_min": 45,  "price_max": 85},
+    {"id": "hw_screen_fix", "label": "Screen Re-screen",        "description": "Repair existing frame",           "service_id": 64, "price_min": 25,  "price_max": 55},
+    {"id": "hw_reglaze",    "label": "Window Reglazing",        "description": "Re-putty glass in wood frame",    "service_id": 65, "price_min": 45,  "price_max": 85},
+    {"id": "hw_lock",       "label": "Window Lock",             "description": "Sash lock, cam, keyed lock",      "service_id": 66, "price_min": 45,  "price_max": 95},
+    {"id": "hw_track",      "label": "Sliding Door Track",      "description": "Track repair or replacement",     "service_id": 67, "price_min": 75,  "price_max": 165},
+    {"id": "hw_weather",    "label": "Weatherstripping",        "description": "Seal gaps, draft stoppers",       "service_id": 68, "price_min": 35,  "price_max": 75},
+]
+
+# Update CATEGORY_META with hardware
+CATEGORY_META["hardware"] = {"label": "🔧 Hardware", "order": 5}

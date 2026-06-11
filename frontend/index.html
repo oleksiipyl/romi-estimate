@@ -155,7 +155,7 @@
 
 <script>
 const API='';
-const SVC={residential_single:1,residential_igu:2,residential_foggy:13,commercial_storefront:17,commercial_partition:19,commercial_door:23,shower_door:49,shower_mirror:50,specialty_tabletop:50,specialty_custom:3,specialty_laminated:6};
+const SVC={residential_single:1,residential_igu:2,residential_foggy:13,commercial_storefront:17,commercial_partition:19,commercial_door:23,shower_door:49,shower_mirror:50,specialty_tabletop:50,specialty_custom:3,specialty_laminated:6,hw_operator:60,hw_balance:61,hw_hardware:62,hw_screen_new:63,hw_screen_fix:64,hw_reglaze:65,hw_lock:66,hw_track:67,hw_weather:68};
 const HCP={residential_single:'single_pane',residential_igu:'double_pane_igu',residential_foggy:'double_pane_igu',commercial_storefront:'commercial_storefront',shower_door:'shower_door',shower_mirror:'mirror',specialty_tabletop:'custom_tempered',specialty_laminated:'laminated'};
 const FRAC={'0':0,'1/8':.125,'1/4':.25,'3/8':.375,'1/2':.5,'5/8':.625,'3/4':.75,'7/8':.875};
 
@@ -222,7 +222,9 @@ async function selProd(id,btn){
   prod=d; opts={};
   (d.fields||[]).forEach(f=>{if(f.default)opts[f.id]=f.default;});
   renderOpts();
-  document.getElementById('dimSection').style.display='block';
+  // Hardware: no dimensions needed
+  const isHw = prod.is_flat_price || prod.category==='hardware';
+  document.getElementById('dimSection').style.display=isHw?'none':'block';
   document.getElementById('jobSection').style.display='block';
   setTimeout(()=>document.getElementById('dimSection').scrollIntoView({behavior:'smooth',block:'nearest'}),80);
   sched();
@@ -353,6 +355,14 @@ function sched(){
 
 async function doCalc(){
   if(!prod) return;
+  if(prod.is_flat_price){
+    const condAdd=opts['condition']==='difficult'?25:opts['condition']==='damaged'?40:0;
+    const mn=prod.price_min+condAdd, mx=prod.price_max+condAdd;
+    document.getElementById('resultArea').innerHTML=`<div class="result-in bg-white rounded-2xl border-2 border-blue-600 p-4 shadow-md"><div class="text-xs text-gray-500 mb-1">${prod.label} · per unit</div><div class="text-3xl font-bold text-blue-600 mb-0.5">${'$'+mn}–${'$'+mx}</div><div class="text-xs text-gray-400 mb-3">Estimate per unit</div><button onclick="navigator.clipboard.writeText('ESTIMATE: ${prod.label}\\n$${mn}\\u2013$${mx} per unit\\nFast Glass & Windows \\u2014 213-566-8886').then(()=>{})" class="w-full bg-blue-600 text-white rounded-xl py-2.5 text-sm font-semibold">📋 Copy</button></div>`;
+    document.getElementById('similarArea').innerHTML='';
+    document.getElementById('marketBadge').classList.add('hidden');
+    return;
+  }
   const body={
     service_id:SVC[prod.id]||1,
     width_ft:0,

@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from database import get_db, init_db, seed_services, seed_zip_multipliers, seed_modifiers, seed_settings
 from calculator import calculate, parse_dimensions
-from products import PRODUCTS, get_products_by_category, CATEGORY_META, get_product
+from products import PRODUCTS, get_products_by_category, CATEGORY_META, get_product, HARDWARE_PRODUCTS
 
 # Init DB on startup
 init_db()
@@ -117,12 +117,48 @@ def get_products_api():
                 "category_label": meta["label"],
                 "products": by_cat[cat_id]
             })
+    # Add hardware category
+    result.append({
+        "category_id": "hardware",
+        "category_label": "🔧 Hardware",
+        "products": [
+            {"id": p["id"], "label": p["label"], "description": p["description"],
+             "price_per_sqft_min": p["price_min"], "price_per_sqft_max": p["price_max"]}
+            for p in HARDWARE_PRODUCTS
+        ]
+    })
     return result
 
 
 @app.get("/api/products/{product_id}")
 def get_product_api(product_id: str):
     """Get single product with all fields"""
+    # Check hardware products first
+    hw = next((p for p in HARDWARE_PRODUCTS if p["id"] == product_id), None)
+    if hw:
+        return {
+            "id": hw["id"],
+            "label": hw["label"],
+            "description": hw["description"],
+            "category": "hardware",
+            "service_id": hw["service_id"],
+            "price_min": hw["price_min"],
+            "price_max": hw["price_max"],
+            "is_flat_price": True,
+            "fields": [
+                {
+                    "id": "condition",
+                    "label": "Condition",
+                    "type": "radio",
+                    "default": "standard",
+                    "options": [
+                        {"value": "standard", "label": "Standard",        "price_add_unit": 0},
+                        {"value": "difficult", "label": "Difficult access", "price_add_unit": 25},
+                        {"value": "damaged",   "label": "Extra damage",    "price_add_unit": 40},
+                    ]
+                }
+            ]
+        }
     p = get_product(product_id)
     if not p:
         raise HTTPException(status_code=404, detail="Product not found")
