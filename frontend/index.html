@@ -2,520 +2,521 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>Glass Estimator — Fast Glass & Windows</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    .cat-btn.active  { background:#2563EB; color:#fff; border-color:#2563EB; }
-    .prod-btn.active { background:#EFF6FF; border-color:#2563EB; color:#1D4ED8; }
-    .opt-btn { min-height:44px; transition:all .15s; cursor:pointer; }
-    .opt-btn.active { background:#2563EB; color:#fff; border-color:#2563EB; }
-    .result-box { animation: fadeIn .3s ease; }
-    @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    * { -webkit-tap-highlight-color: transparent; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+
+    /* Category pills */
+    .cat-pill { transition: all .15s; cursor: pointer; min-height: 44px; }
+    .cat-pill.on { background: #2563EB; color: #fff; border-color: #2563EB; }
+
+    /* Product cards */
+    .prod-card { transition: all .15s; cursor: pointer; min-height: 56px; }
+    .prod-card.on { border-color: #2563EB; background: #EFF6FF; color: #1D4ED8; }
+
+    /* Option pills */
+    .opt-pill { transition: all .15s; cursor: pointer; min-height: 40px; white-space: nowrap; }
+    .opt-pill.on { background: #2563EB; color: #fff; border-color: #2563EB; }
+
+    /* Floor / urgency buttons */
+    .choice-btn { transition: all .15s; cursor: pointer; min-height: 40px; }
+    .choice-btn.on { background: #2563EB; color: #fff; border-color: #2563EB; }
+
+    /* Result animation */
+    .result-in { animation: slideIn .25s ease; }
+    @keyframes slideIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+    /* Section card */
+    .card { background: #fff; border: 1px solid #E5E7EB; border-radius: 16px; padding: 16px; }
+
+    /* Compact input */
+    input[type=number] { -moz-appearance: textfield; }
+    input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
   </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body class="bg-gray-50 min-h-screen pb-10">
 
-<header class="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
-  <div class="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
+<!-- HEADER -->
+<header class="bg-white border-b border-gray-100 sticky top-0 z-20">
+  <div class="max-w-xl mx-auto px-4 py-3 flex justify-between items-center">
     <div>
-      <h1 class="text-lg font-bold text-gray-900">🪟 Glass Estimator</h1>
-      <p class="text-xs text-gray-400">Fast Glass & Windows — Internal Tool</p>
+      <div class="font-bold text-gray-900 text-base leading-tight">🪟 Glass Estimator</div>
+      <div class="text-xs text-gray-400">Fast Glass & Windows</div>
     </div>
-    <a href="/admin" class="text-xs text-gray-400 hover:text-blue-600">⚙️ Admin</a>
+    <a href="/admin" class="text-xs text-gray-400 px-2 py-1 rounded hover:bg-gray-50">⚙️</a>
   </div>
 </header>
 
-<main class="max-w-2xl mx-auto px-4 py-5 space-y-4">
+<main class="max-w-xl mx-auto px-3 pt-4 space-y-3" id="main">
 
-  <!-- STEP 1: Category -->
-  <section class="bg-white rounded-xl border border-gray-200 p-4">
-    <div class="flex items-center gap-2 mb-3">
-      <span class="w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">1</span>
-      <h2 class="font-semibold text-gray-800">What needs to be done?</h2>
-    </div>
+  <!-- 1. CATEGORY -->
+  <div class="card">
+    <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">What needs to be done?</div>
     <div class="grid grid-cols-2 gap-2" id="catGrid"></div>
-  </section>
+  </div>
 
-  <!-- STEP 2: Product Type -->
-  <section class="bg-white rounded-xl border border-gray-200 p-4" id="prodSection">
-    <div class="flex items-center gap-2 mb-3">
-      <span class="w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">2</span>
-      <h2 class="font-semibold text-gray-800">Select type</h2>
-    </div>
-    <div id="prodGrid" class="text-sm text-gray-400">← Select a category first</div>
-  </section>
+  <!-- 2. PRODUCT TYPE -->
+  <div class="card" id="prodSection" style="display:none">
+    <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Select type</div>
+    <div class="grid grid-cols-2 gap-2" id="prodGrid"></div>
+  </div>
 
-  <!-- STEP 3: Options (dynamic) -->
+  <!-- 3. PRODUCT OPTIONS -->
   <div id="optionsArea"></div>
 
-  <!-- STEP 4: Dimensions -->
-  <section class="bg-white rounded-xl border border-gray-200 p-4" id="dimSection" style="display:none">
-    <div class="flex items-center gap-2 mb-4">
-      <span class="w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0" id="dimStepNum">4</span>
-      <h2 class="font-semibold text-gray-800">Dimensions</h2>
-    </div>
-    <div class="grid grid-cols-2 gap-4 mb-3">
+  <!-- 4. DIMENSIONS -->
+  <div class="card" id="dimSection" style="display:none">
+    <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Dimensions & Quantity</div>
+    <div class="grid grid-cols-2 gap-3 mb-3">
+      <!-- Width -->
       <div>
-        <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Width</p>
+        <label class="text-xs text-gray-500 mb-1 block">Width</label>
         <div class="flex items-center gap-1 mb-1">
-          <input type="number" id="wFt" min="0" max="50" value="0" class="w-14 text-center border border-gray-300 rounded-lg py-2 text-base">
-          <span class="text-sm text-gray-500">ft</span>
-        </div>
-        <div class="flex items-center gap-1 mb-1">
-          <input type="number" id="wIn" min="0" max="11" value="24" class="w-14 text-center border border-gray-300 rounded-lg py-2 text-base">
-          <span class="text-sm text-gray-500">in</span>
+          <input id="wFt" type="number" min="0" max="30" value="0"
+            class="w-12 text-center border border-gray-300 rounded-lg py-2 text-sm font-medium">
+          <span class="text-xs text-gray-400">ft</span>
+          <input id="wIn" type="number" min="0" max="11" value="24"
+            class="w-12 text-center border border-gray-300 rounded-lg py-2 text-sm font-medium">
+          <span class="text-xs text-gray-400">in</span>
         </div>
         <select id="wFrac" class="w-full border border-gray-300 rounded-lg px-2 py-2 text-sm">
-          <option value="0">+ 0</option><option value="1/8">+ 1/8"</option>
-          <option value="1/4">+ 1/4"</option><option value="3/8">+ 3/8"</option>
-          <option value="1/2" selected>+ 1/2"</option><option value="5/8">+ 5/8"</option>
-          <option value="3/4">+ 3/4"</option><option value="7/8">+ 7/8"</option>
+          <option value="0">+ 0"</option><option value="1/8">+ ⅛"</option>
+          <option value="1/4">+ ¼"</option><option value="3/8">+ ⅜"</option>
+          <option value="1/2" selected>+ ½"</option><option value="5/8">+ ⅝"</option>
+          <option value="3/4">+ ¾"</option><option value="7/8">+ ⅞"</option>
         </select>
       </div>
+      <!-- Height -->
       <div>
-        <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Height</p>
+        <label class="text-xs text-gray-500 mb-1 block">Height</label>
         <div class="flex items-center gap-1 mb-1">
-          <input type="number" id="hFt" min="0" max="50" value="0" class="w-14 text-center border border-gray-300 rounded-lg py-2 text-base">
-          <span class="text-sm text-gray-500">ft</span>
-        </div>
-        <div class="flex items-center gap-1 mb-1">
-          <input type="number" id="hIn" min="0" max="11" value="36" class="w-14 text-center border border-gray-300 rounded-lg py-2 text-base">
-          <span class="text-sm text-gray-500">in</span>
+          <input id="hFt" type="number" min="0" max="30" value="0"
+            class="w-12 text-center border border-gray-300 rounded-lg py-2 text-sm font-medium">
+          <span class="text-xs text-gray-400">ft</span>
+          <input id="hIn" type="number" min="0" max="11" value="36"
+            class="w-12 text-center border border-gray-300 rounded-lg py-2 text-sm font-medium">
+          <span class="text-xs text-gray-400">in</span>
         </div>
         <select id="hFrac" class="w-full border border-gray-300 rounded-lg px-2 py-2 text-sm">
-          <option value="0" selected>+ 0</option><option value="1/8">+ 1/8"</option>
-          <option value="1/4">+ 1/4"</option><option value="3/8">+ 3/8"</option>
-          <option value="1/2">+ 1/2"</option><option value="5/8">+ 5/8"</option>
-          <option value="3/4">+ 3/4"</option><option value="7/8">+ 7/8"</option>
+          <option value="0" selected>+ 0"</option><option value="1/8">+ ⅛"</option>
+          <option value="1/4">+ ¼"</option><option value="3/8">+ ⅜"</option>
+          <option value="1/2">+ ½"</option><option value="5/8">+ ⅝"</option>
+          <option value="3/4">+ ¾"</option><option value="7/8">+ ⅞"</option>
         </select>
       </div>
     </div>
-    <div class="bg-gray-50 rounded-lg px-3 py-2 text-sm text-gray-600 mb-3" id="areaPreview">Area: —</div>
+    <!-- Area + Qty -->
     <div class="flex items-center gap-3">
-      <label class="text-sm font-medium text-gray-700">Qty:</label>
-      <input type="number" id="qty" min="1" max="100" value="1" class="w-20 text-center border border-gray-300 rounded-lg py-2 text-base">
+      <div class="flex-1 bg-blue-50 rounded-lg px-3 py-2 text-sm text-blue-700 font-medium" id="areaPreview">Area: —</div>
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-gray-500">Qty</span>
+        <input id="qty" type="number" min="1" max="50" value="1"
+          class="w-14 text-center border border-gray-300 rounded-lg py-2 text-sm font-medium">
+      </div>
     </div>
-  </section>
+  </div>
 
-  <!-- STEP 5: Location & Job -->
-  <section class="bg-white rounded-xl border border-gray-200 p-4" id="jobSection" style="display:none">
-    <div class="flex items-center gap-2 mb-4">
-      <span class="w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0" id="jobStepNum">5</span>
-      <h2 class="font-semibold text-gray-800">Location & Job Details</h2>
-    </div>
+  <!-- 5. LOCATION & JOB -->
+  <div class="card" id="jobSection" style="display:none">
+    <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Location & Job Details</div>
 
     <!-- ZIP -->
-    <div class="mb-4">
-      <label class="text-xs font-semibold text-gray-500 uppercase mb-1 block">ZIP Code</label>
-      <input type="text" id="zip" placeholder="e.g. 90210" maxlength="5"
-        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-base"
-        oninput="lookupZip(this.value)">
-      <div id="zipInfo" class="text-sm text-gray-500 mt-1 min-h-5"></div>
+    <div class="mb-3">
+      <div class="flex gap-2 items-center">
+        <input id="zip" type="text" placeholder="ZIP Code (e.g. 90210)" maxlength="5"
+          class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"
+          oninput="onZipInput(this.value)">
+        <div id="zipBadge" class="text-xs text-gray-500 whitespace-nowrap"></div>
+      </div>
     </div>
 
     <!-- Floor -->
-    <div class="mb-4">
-      <label class="text-xs font-semibold text-gray-500 uppercase mb-2 block">Floor</label>
+    <div class="mb-3">
+      <div class="text-xs text-gray-500 mb-1">Floor</div>
       <div class="flex gap-2">
-        <button onclick="setFloor(1,this)" class="opt-btn active flex-1 border-2 border-blue-600 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium">1st</button>
-        <button onclick="setFloor(2,this)" class="opt-btn flex-1 border-2 border-gray-300 text-gray-700 rounded-lg py-2 text-sm font-medium">2nd +$150</button>
-        <button onclick="setFloor(3,this)" class="opt-btn flex-1 border-2 border-gray-300 text-gray-700 rounded-lg py-2 text-sm font-medium">3rd+ +$300</button>
+        <button onclick="setChoice('floor',1,this)" class="choice-btn on flex-1 border-2 border-blue-600 bg-blue-600 text-white rounded-xl py-2 text-sm font-medium">1st</button>
+        <button onclick="setChoice('floor',2,this)" class="choice-btn flex-1 border-2 border-gray-200 text-gray-700 rounded-xl py-2 text-sm font-medium">2nd<br><span class="text-xs opacity-70">+$150</span></button>
+        <button onclick="setChoice('floor',3,this)" class="choice-btn flex-1 border-2 border-gray-200 text-gray-700 rounded-xl py-2 text-sm font-medium">3rd+<br><span class="text-xs opacity-70">+$300</span></button>
       </div>
     </div>
 
     <!-- Techs -->
-    <div class="mb-4">
-      <label class="text-xs font-semibold text-gray-500 uppercase mb-2 block">Technicians</label>
+    <div class="mb-3">
+      <div class="text-xs text-gray-500 mb-1">Technicians</div>
       <div class="flex gap-2">
-        <button onclick="setTechs(1,this)" class="opt-btn active w-16 border-2 border-blue-600 bg-blue-600 text-white rounded-lg py-2 text-sm font-bold">1</button>
-        <button onclick="setTechs(2,this)" class="opt-btn w-16 border-2 border-gray-300 text-gray-700 rounded-lg py-2 text-sm font-bold">2</button>
-        <button onclick="setTechs(3,this)" class="opt-btn w-16 border-2 border-gray-300 text-gray-700 rounded-lg py-2 text-sm font-bold">3</button>
+        <button onclick="setChoice('techs',1,this)" class="choice-btn on w-14 border-2 border-blue-600 bg-blue-600 text-white rounded-xl py-2 text-sm font-bold">1</button>
+        <button onclick="setChoice('techs',2,this)" class="choice-btn w-14 border-2 border-gray-200 text-gray-700 rounded-xl py-2 text-sm font-bold">2</button>
+        <button onclick="setChoice('techs',3,this)" class="choice-btn w-14 border-2 border-gray-200 text-gray-700 rounded-xl py-2 text-sm font-bold">3</button>
       </div>
     </div>
 
     <!-- Urgency -->
-    <div class="mb-4">
-      <label class="text-xs font-semibold text-gray-500 uppercase mb-2 block">Urgency</label>
-      <div class="space-y-2">
-        <button onclick="setUrgency('normal',this)" class="opt-btn active w-full text-left px-4 py-2 border-2 border-blue-600 bg-blue-600 text-white rounded-lg text-sm font-medium">Standard (3–5 days)</button>
-        <button onclick="setUrgency('urgent',this)" class="opt-btn w-full text-left px-4 py-2 border-2 border-gray-300 text-gray-700 rounded-lg text-sm font-medium">Same-Day <span class="text-orange-500 font-bold">+30%</span></button>
-        <button onclick="setUrgency('emergency',this)" class="opt-btn w-full text-left px-4 py-2 border-2 border-gray-300 text-gray-700 rounded-lg text-sm font-medium">Emergency / After Hours <span class="text-red-500 font-bold">+50%</span></button>
+    <div class="mb-3">
+      <div class="text-xs text-gray-500 mb-1">Urgency</div>
+      <div class="flex flex-col gap-1.5">
+        <button onclick="setChoice('urgency','normal',this)" class="choice-btn on text-left border-2 border-blue-600 bg-blue-600 text-white rounded-xl px-3 py-2 text-sm font-medium">Standard (3–5 days)</button>
+        <button onclick="setChoice('urgency','urgent',this)" class="choice-btn text-left border-2 border-gray-200 text-gray-700 rounded-xl px-3 py-2 text-sm font-medium">Same-Day <span class="font-bold text-orange-500">+30%</span></button>
+        <button onclick="setChoice('urgency','emergency',this)" class="choice-btn text-left border-2 border-gray-200 text-gray-700 rounded-xl px-3 py-2 text-sm font-medium">Emergency / After Hours <span class="font-bold text-red-500">+50%</span></button>
       </div>
     </div>
 
     <!-- Notes -->
     <div>
-      <label class="text-xs font-semibold text-gray-500 uppercase mb-1 block">Notes</label>
-      <textarea id="notes" rows="2" placeholder="Outside patio, ladder needed, Beverly Hills estate..."
-        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none"></textarea>
+      <textarea id="notes" rows="2" placeholder="Notes: outside patio, ladder needed, Beverly Hills estate..."
+        class="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm resize-none text-gray-700"
+        oninput="schedulCalc()"></textarea>
     </div>
-  </section>
-
-  <!-- CALCULATE -->
-  <button id="calcBtn" onclick="doCalculate()" style="display:none"
-    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl text-lg shadow-md transition-colors">
-    💰 Calculate Price
-  </button>
-
-  <!-- SIMILAR JOBS -->
-  <div id="similarJobs"></div>
+  </div>
 
   <!-- RESULT -->
-  <div id="result"></div>
-  <div class="h-8"></div>
+  <div id="resultArea"></div>
+
+  <!-- SIMILAR JOBS -->
+  <div id="similarArea"></div>
 
 </main>
 
 <script>
 const API = '';
-let allCategories = [];
-let currentProduct = null;
-let currentOptions = {};   // fieldId → selected value
-let floor = 1, techs = 1, urgency = 'normal';
-let stepOffset = 0;
+const SVC = {residential_single:1,residential_igu:2,residential_foggy:13,commercial_storefront:17,commercial_partition:19,commercial_door:23,shower_door:49,shower_mirror:50,specialty_tabletop:50,specialty_custom:3,specialty_laminated:6};
+const HCP = {residential_single:'single_pane',residential_igu:'double_pane_igu',residential_foggy:'double_pane_igu',commercial_storefront:'commercial_storefront',shower_door:'shower_door',shower_mirror:'mirror',specialty_tabletop:'custom_tempered',specialty_laminated:'laminated'};
+const FRAC = {'0':0,'1/8':.125,'1/4':.25,'3/8':.375,'1/2':.5,'5/8':.625,'3/4':.75,'7/8':.875};
+
+let allCats = [];
+let curProduct = null;
+let curOpts = {};
+let state = { floor:1, techs:1, urgency:'normal' };
+let calcTimer = null;
 
 // ── INIT ──────────────────────────────────────────────────────
 async function init() {
   try {
-    const res = await fetch(`${API}/api/products`);
-    allCategories = await res.json();
-    renderCategories();
+    allCats = await fetchJSON('/api/products');
+    renderCats();
+    bindDimInputs();
   } catch(e) {
-    document.getElementById('catGrid').innerHTML = '<div class="col-span-2 text-red-500 text-sm">Server offline. Run: cd backend && python3 -m uvicorn main:app --port 8001</div>';
+    document.getElementById('catGrid').innerHTML =
+      '<div class="col-span-2 text-red-500 text-sm p-2">Server offline. Run: cd backend && python3 -m uvicorn main:app --port 8001</div>';
   }
 }
 
+async function fetchJSON(path, opts={}) {
+  const r = await fetch(API + path, opts);
+  if (!r.ok) { const e = await r.json(); throw new Error(e.detail || r.status); }
+  return r.json();
+}
+
 // ── CATEGORIES ────────────────────────────────────────────────
-function renderCategories() {
+function renderCats() {
   const g = document.getElementById('catGrid');
   g.innerHTML = '';
-  allCategories.forEach(cat => {
+  allCats.forEach(cat => {
     const b = document.createElement('button');
-    b.className = 'cat-btn border-2 border-gray-200 rounded-xl px-3 py-3 text-left transition-all';
-    b.innerHTML = `<div class="text-2xl mb-1">${cat.category_label.split(' ')[0]}</div>
-                   <div class="text-sm font-semibold text-gray-800">${cat.category_label.substring(2)}</div>
-                   <div class="text-xs text-gray-400 mt-0.5">${cat.products.length} types</div>`;
-    b.onclick = () => selectCategory(cat, b);
+    b.className = 'cat-pill border-2 border-gray-200 rounded-2xl px-3 py-2.5 text-left';
+    const emoji = cat.category_label.split(' ')[0];
+    const label = cat.category_label.slice(emoji.length).trim();
+    b.innerHTML = `<div class="text-xl leading-none mb-0.5">${emoji}</div><div class="text-sm font-semibold text-gray-800 leading-tight">${label}</div><div class="text-xs text-gray-400">${cat.products.length} types</div>`;
+    b.onclick = () => selectCat(cat, b);
     g.appendChild(b);
   });
 }
 
-function selectCategory(cat, btn) {
-  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  currentProduct = null;
-  currentOptions = {};
+function selectCat(cat, btn) {
+  document.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  curProduct = null; curOpts = {};
+  clearResults();
+  renderProds(cat.products);
+  document.getElementById('prodSection').style.display = 'block';
   document.getElementById('optionsArea').innerHTML = '';
   document.getElementById('dimSection').style.display = 'none';
   document.getElementById('jobSection').style.display = 'none';
-  document.getElementById('calcBtn').style.display = 'none';
-  document.getElementById('result').innerHTML = '';
-  renderProducts(cat.products);
 }
 
 // ── PRODUCTS ──────────────────────────────────────────────────
-function renderProducts(products) {
+function renderProds(prods) {
   const g = document.getElementById('prodGrid');
   g.innerHTML = '';
-  products.forEach(p => {
+  prods.forEach(p => {
     const b = document.createElement('button');
-    b.className = 'prod-btn w-full text-left border-2 border-gray-200 rounded-xl px-4 py-3 mb-2 transition-all';
-    b.innerHTML = `<div class="flex items-start justify-between gap-2">
-      <div>
-        <div class="font-semibold text-gray-800 text-sm">${p.label}</div>
-        <div class="text-xs text-gray-400 mt-0.5">${p.description}</div>
-      </div>
-      <div class="text-right flex-shrink-0">
-        <div class="text-blue-600 font-bold text-sm">$${p.price_per_sqft_min}–$${p.price_per_sqft_max}</div>
-        <div class="text-xs text-gray-400">/sqft</div>
-      </div>
-    </div>`;
-    b.onclick = () => selectProduct(p.id, b);
+    b.className = 'prod-card border-2 border-gray-200 rounded-2xl p-3 text-left';
+    b.innerHTML = `<div class="font-semibold text-gray-800 text-sm leading-tight">${p.label}</div>
+      <div class="text-xs text-gray-400 mt-0.5">${p.description}</div>
+      <div class="text-blue-600 font-bold text-sm mt-1">$${p.price_per_sqft_min}–$${p.price_per_sqft_max}<span class="text-gray-400 font-normal text-xs">/sqft</span></div>`;
+    b.onclick = () => selectProd(p.id, b);
     g.appendChild(b);
   });
 }
 
-async function selectProduct(id, btn) {
-  document.querySelectorAll('.prod-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  const res = await fetch(`${API}/api/products/${id}`);
-  currentProduct = await res.json();
-  currentOptions = {};
-  // set defaults
-  (currentProduct.fields||[]).forEach(f => {
-    if (f.default) currentOptions[f.id] = f.default;
-  });
+async function selectProd(id, btn) {
+  document.querySelectorAll('.prod-card').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  const detail = await fetchJSON(`/api/products/${id}`);
+  curProduct = detail;
+  curOpts = {};
+  (detail.fields||[]).forEach(f => { if(f.default) curOpts[f.id] = f.default; });
   renderOptions();
   document.getElementById('dimSection').style.display = 'block';
   document.getElementById('jobSection').style.display = 'block';
-  document.getElementById('calcBtn').style.display = 'block';
-  document.getElementById('dimSection').scrollIntoView({behavior:'smooth', block:'nearest'});
+  setTimeout(() => document.getElementById('dimSection').scrollIntoView({behavior:'smooth',block:'nearest'}), 100);
+  schedulCalc();
 }
 
 // ── OPTIONS ───────────────────────────────────────────────────
 function renderOptions() {
   const area = document.getElementById('optionsArea');
   area.innerHTML = '';
-  if (!currentProduct || !currentProduct.fields) return;
+  if (!curProduct?.fields) return;
 
-  let stepNum = 3;
-  currentProduct.fields.forEach(field => {
-    // show_if logic
+  curProduct.fields.forEach(field => {
     if (field.show_if) {
       const dep = field.show_if;
-      if (currentOptions[dep.field] !== dep.value) return;
+      if (curOpts[dep.field] !== dep.value) return;
     }
 
-    const section = document.createElement('section');
-    section.className = 'bg-white rounded-xl border border-gray-200 p-4';
-    section.dataset.fieldId = field.id;
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.fid = field.id;
 
-    const note = field.note ? `<p class="text-xs text-gray-400 mb-2">${field.note}</p>` : '';
+    const noteHtml = field.note ? `<p class="text-xs text-gray-400 mb-2">${field.note}</p>` : '';
+    card.innerHTML = `<div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">${field.label}</div>${noteHtml}<div id="fld_${field.id}" class="flex flex-wrap gap-1.5"></div>`;
+    area.appendChild(card);
 
-    section.innerHTML = `
-      <div class="flex items-center gap-2 mb-3">
-        <span class="w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">${stepNum++}</span>
-        <h2 class="font-semibold text-gray-800">${field.label}</h2>
-      </div>
-      ${note}
-      <div class="space-y-2" id="opts_${field.id}"></div>`;
-
-    area.appendChild(section);
-
-    const container = document.getElementById(`opts_${field.id}`);
+    const container = document.getElementById(`fld_${field.id}`);
 
     if (field.type === 'radio') {
-      field.options.forEach(opt => {
-        const b = document.createElement('button');
-        b.className = `opt-btn w-full text-left border-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${currentOptions[field.id] === opt.value ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-200 text-gray-700'}`;
-        // build price badge
-        let badge = '';
-        const adds = [opt.price_add_sqft, opt.price_add_unit, opt.price_add_lf, opt.labor_add].filter(v => v > 0);
-        const subs = [opt.price_add_sqft, opt.price_add_unit, opt.price_add_lf, opt.labor_add].filter(v => v < 0);
-        if (adds.length) badge = `<span class="ml-auto text-xs opacity-80">+$${adds[0]}${opt.price_add_sqft ? '/sqft' : opt.price_add_unit ? '' : opt.price_add_lf ? '/lf' : ''}</span>`;
-        if (subs.length) badge = `<span class="ml-auto text-xs opacity-80">-$${Math.abs(subs[0])}${opt.price_add_sqft ? '/sqft' : ''}</span>`;
-
-        b.innerHTML = `<div class="flex items-center justify-between">${opt.label}${badge}</div>`;
-        b.onclick = () => {
-          currentOptions[field.id] = opt.value;
-          // re-render to handle show_if
-          renderOptions();
-        };
-        container.appendChild(b);
-      });
+      if (field.options.length <= 6) {
+        // Pill buttons
+        field.options.forEach(opt => {
+          const btn = document.createElement('button');
+          const isOn = curOpts[field.id] === opt.value;
+          btn.className = `opt-pill border-2 ${isOn?'on':'border-gray-200 text-gray-700'} rounded-xl px-3 py-2 text-sm font-medium`;
+          let badge = '';
+          const add = opt.price_add_sqft || opt.price_add_unit || opt.price_add_lf || opt.labor_add || 0;
+          if (add > 0) badge = ` <span class="text-xs opacity-70">+$${add}${opt.price_add_sqft?'/sf':opt.price_add_lf?'/lf':''}</span>`;
+          if (add < 0) badge = ` <span class="text-xs opacity-70">-$${Math.abs(add)}/sf</span>`;
+          btn.innerHTML = opt.label + badge;
+          btn.onclick = () => { curOpts[field.id] = opt.value; renderOptions(); schedulCalc(); };
+          container.appendChild(btn);
+        });
+      } else {
+        // Dropdown
+        const sel = document.createElement('select');
+        sel.className = 'w-full border border-gray-300 rounded-xl px-3 py-2 text-sm';
+        field.options.forEach(opt => {
+          const o = document.createElement('option');
+          o.value = opt.value;
+          o.selected = curOpts[field.id] === opt.value;
+          const add = opt.price_add_sqft||opt.price_add_unit||0;
+          o.textContent = opt.label + (add>0?` (+$${add})`:add<0?` (-$${Math.abs(add)})`:' ✓');
+          sel.appendChild(o);
+        });
+        sel.onchange = () => { curOpts[field.id] = sel.value; renderOptions(); schedulCalc(); };
+        container.appendChild(sel);
+      }
     } else if (field.type === 'checkbox') {
-      if (!currentOptions[field.id]) currentOptions[field.id] = [];
+      if (!Array.isArray(curOpts[field.id])) curOpts[field.id] = [];
       field.options.forEach(opt => {
-        const checked = (currentOptions[field.id]||[]).includes(opt.value);
-        const label = document.createElement('label');
-        label.className = 'flex items-center gap-3 py-2 cursor-pointer border-b border-gray-100 last:border-0';
-        label.innerHTML = `
-          <input type="checkbox" ${checked?'checked':''} class="w-5 h-5 rounded text-blue-600 flex-shrink-0">
-          <span class="text-sm font-medium text-gray-800 flex-1">${opt.label}</span>
-          <span class="text-sm text-gray-500">+$${opt.price_add_unit}</span>`;
-        label.querySelector('input').onchange = (e) => {
-          if (!currentOptions[field.id]) currentOptions[field.id] = [];
-          if (e.target.checked) {
-            currentOptions[field.id].push(opt.value);
-          } else {
-            currentOptions[field.id] = currentOptions[field.id].filter(v => v !== opt.value);
-          }
+        const lbl = document.createElement('label');
+        lbl.className = 'flex items-center gap-2 py-1.5 cursor-pointer border-b border-gray-50 last:border-0 w-full';
+        const checked = curOpts[field.id].includes(opt.value);
+        lbl.innerHTML = `<input type="checkbox" ${checked?'checked':''} class="w-4 h-4 rounded text-blue-600 flex-shrink-0">
+          <span class="text-sm text-gray-800 flex-1">${opt.label}</span>
+          <span class="text-xs text-gray-400">+$${opt.price_add_unit}</span>`;
+        lbl.querySelector('input').onchange = e => {
+          if (!Array.isArray(curOpts[field.id])) curOpts[field.id] = [];
+          if (e.target.checked) curOpts[field.id].push(opt.value);
+          else curOpts[field.id] = curOpts[field.id].filter(v => v !== opt.value);
+          schedulCalc();
         };
-        container.appendChild(label);
+        container.appendChild(lbl);
       });
     }
   });
-
-  // update step numbers on dim/job sections
-  const totalOptSteps = document.querySelectorAll('#optionsArea section').length;
-  document.getElementById('dimStepNum').textContent = 3 + totalOptSteps;
-  document.getElementById('jobStepNum').textContent = 4 + totalOptSteps;
 }
 
-// ── AREA PREVIEW ──────────────────────────────────────────────
-function calcArea() {
-  const fm = {'0':0,'1/8':0.125,'1/4':0.25,'3/8':0.375,'1/2':0.5,'5/8':0.625,'3/4':0.75,'7/8':0.875};
-  const w = (parseInt(document.getElementById('wFt').value)||0)*12 + (parseInt(document.getElementById('wIn').value)||0) + fm[document.getElementById('wFrac').value];
-  const h = (parseInt(document.getElementById('hFt').value)||0)*12 + (parseInt(document.getElementById('hIn').value)||0) + fm[document.getElementById('hFrac').value];
-  const q = parseInt(document.getElementById('qty').value)||1;
-  if (w>0 && h>0) {
-    const a = (w/12 * h/12 * q).toFixed(2);
-    const wFt = document.getElementById('wFt').value, wIn = document.getElementById('wIn').value, wFr = document.getElementById('wFrac').value;
-    const hFt = document.getElementById('hFt').value, hIn = document.getElementById('hIn').value, hFr = document.getElementById('hFrac').value;
-    const ws = `${+wFt>0?wFt+'ft ':''}${wIn}"${wFr!='0'?' '+wFr+'"':''}`;
-    const hs = `${+hFt>0?hFt+'ft ':''}${hIn}"${hFr!='0'?' '+hFr+'"':''}`;
-    document.getElementById('areaPreview').textContent = `${ws} × ${hs}${q>1?' × '+q+' pcs':''} = ${a} sq ft`;
+// ── DIMENSIONS ────────────────────────────────────────────────
+function bindDimInputs() {
+  ['wFt','wIn','wFrac','hFt','hIn','hFrac','qty'].forEach(id => {
+    const el = document.getElementById(id);
+    el.addEventListener('input', () => { updateArea(); schedulCalc(); });
+    el.addEventListener('change', () => { updateArea(); schedulCalc(); });
+  });
+}
+
+function updateArea() {
+  const wFt=+document.getElementById('wFt').value||0, wIn=+document.getElementById('wIn').value||0;
+  const wFr=FRAC[document.getElementById('wFrac').value]||0;
+  const hFt=+document.getElementById('hFt').value||0, hIn=+document.getElementById('hIn').value||0;
+  const hFr=FRAC[document.getElementById('hFrac').value]||0;
+  const q=+document.getElementById('qty').value||1;
+  const w=wFt*12+wIn+wFr, h=hFt*12+hIn+hFr;
+  if(w>0&&h>0){
+    const a=(w/12*h/12*q).toFixed(2);
+    const ws=`${wFt>0?wFt+"ft ":""}${wIn}"${wFr>0?" "+document.getElementById('wFrac').value+'"':""}`;
+    const hs=`${hFt>0?hFt+"ft ":""}${hIn}"${hFr>0?" "+document.getElementById('hFrac').value+'"':""}`;
+    document.getElementById('areaPreview').textContent=`${ws} × ${hs}${q>1?" × "+q:""}  =  ${a} sq ft`;
+  } else {
+    document.getElementById('areaPreview').textContent='Area: —';
   }
 }
-['wFt','wIn','wFrac','hFt','hIn','hFrac','qty'].forEach(id => {
-  const el = document.getElementById(id);
-  el.addEventListener('input', calcArea);
-  el.addEventListener('change', calcArea);
-});
 
 // ── ZIP ───────────────────────────────────────────────────────
 let zipTimer;
-async function lookupZip(zip) {
+function onZipInput(v) {
   clearTimeout(zipTimer);
-  if (zip.length !== 5) { document.getElementById('zipInfo').textContent=''; return; }
-  zipTimer = setTimeout(async () => {
-    try {
-      const d = await (await fetch(`${API}/api/zip/${zip}`)).json();
-      const m = d.multiplier>1 ? ` • +${Math.round((d.multiplier-1)*100)}% area rate` : '';
-      document.getElementById('zipInfo').innerHTML = `📍 <strong>${d.city}</strong> • ~${d.travel_minutes} min drive${m}`;
-    } catch(e) {}
-  }, 600);
+  if(v.length!==5){document.getElementById('zipBadge').textContent='';return;}
+  zipTimer = setTimeout(async()=>{
+    try{
+      const d=await fetchJSON(`/api/zip/${v}`);
+      const m=d.multiplier>1?` +${Math.round((d.multiplier-1)*100)}%`:'';
+      document.getElementById('zipBadge').innerHTML=`<span class="text-blue-600 font-medium">${d.city}</span><span class="text-gray-400"> ~${d.travel_minutes}min${m}</span>`;
+      schedulCalc();
+    }catch(e){document.getElementById('zipBadge').textContent='';}
+  },500);
 }
 
-// ── FLOOR / TECHS / URGENCY ───────────────────────────────────
-function setFloor(n, btn) {
-  floor = n;
-  document.querySelectorAll('.opt-btn[onclick^="setFloor"]').forEach(b => { b.classList.remove('active','bg-blue-600','text-white','border-blue-600'); b.classList.add('border-gray-300','text-gray-700'); });
-  btn.classList.add('active','bg-blue-600','text-white','border-blue-600'); btn.classList.remove('border-gray-300','text-gray-700');
-}
-function setTechs(n, btn) {
-  techs = n;
-  document.querySelectorAll('.opt-btn[onclick^="setTechs"]').forEach(b => { b.classList.remove('active','bg-blue-600','text-white','border-blue-600'); b.classList.add('border-gray-300','text-gray-700'); });
-  btn.classList.add('active','bg-blue-600','text-white','border-blue-600'); btn.classList.remove('border-gray-300','text-gray-700');
-}
-function setUrgency(u, btn) {
-  urgency = u;
-  document.querySelectorAll('.opt-btn[onclick^="setUrgency"]').forEach(b => { b.classList.remove('active','bg-blue-600','text-white','border-blue-600'); b.classList.add('border-gray-300','text-gray-700'); });
-  btn.classList.add('active','bg-blue-600','text-white','border-blue-600'); btn.classList.remove('border-gray-300','text-gray-700');
+// ── CHOICES ───────────────────────────────────────────────────
+function setChoice(key, val, btn) {
+  state[key] = val;
+  const group = btn.closest('div').querySelectorAll('.choice-btn');
+  group.forEach(b=>{
+    b.classList.remove('on','bg-blue-600','text-white','border-blue-600');
+    b.classList.add('border-gray-200','text-gray-700');
+  });
+  btn.classList.add('on','bg-blue-600','text-white','border-blue-600');
+  btn.classList.remove('border-gray-200','text-gray-700');
+  schedulCalc();
 }
 
 // ── CALCULATE ─────────────────────────────────────────────────
-async function doCalculate() {
-  if (!currentProduct) { alert('Select a product type first'); return; }
-  const btn = document.getElementById('calcBtn');
-  btn.textContent = '⏳ Calculating...'; btn.disabled = true;
+function schedulCalc() {
+  clearTimeout(calcTimer);
+  if (!curProduct) return;
+  const wIn=+document.getElementById('wIn').value||0, hIn=+document.getElementById('hIn').value||0;
+  if(wIn===0&&+document.getElementById('wFt').value===0) return;
+  if(hIn===0&&+document.getElementById('hFt').value===0) return;
+  document.getElementById('resultArea').innerHTML = `<div class="card text-center py-6 text-gray-400"><div class="animate-pulse text-2xl mb-1">⏳</div><div class="text-sm">Calculating...</div></div>`;
+  calcTimer = setTimeout(doCalc, 400);
+}
 
-  // Build product-specific options string for notes
-  const optSummary = Object.entries(currentOptions)
-    .map(([k,v]) => Array.isArray(v) ? `${k}: ${v.join('+')}` : `${k}: ${v}`)
-    .join(', ');
-
-  // Map new product to old service_id (use first match or default)
-  const serviceMap = {
-    'residential_single':    1,
-    'residential_igu':       2,
-    'residential_foggy':     13,
-    'commercial_storefront': 17,
-    'commercial_partition':  19,
-    'commercial_door':       23,
-    'shower_door':           49,
-    'shower_mirror':         50,
-    'specialty_tabletop':    50,
-    'specialty_custom':      3,
-    'specialty_laminated':   6,
-  };
-
+async function doCalc() {
+  if (!curProduct) return;
   const body = {
-    service_id: serviceMap[currentProduct.id] || 1,
-    width_ft: parseInt(document.getElementById('wFt').value)||0,
-    width_in: parseInt(document.getElementById('wIn').value)||0,
+    service_id: SVC[curProduct.id] || 1,
+    width_ft: +document.getElementById('wFt').value||0,
+    width_in: +document.getElementById('wIn').value||0,
     width_frac: document.getElementById('wFrac').value,
-    height_ft: parseInt(document.getElementById('hFt').value)||0,
-    height_in: parseInt(document.getElementById('hIn').value)||0,
+    height_ft: +document.getElementById('hFt').value||0,
+    height_in: +document.getElementById('hIn').value||0,
     height_frac: document.getElementById('hFrac').value,
-    quantity: parseInt(document.getElementById('qty').value)||1,
-    zip_code: document.getElementById('zip').value || '91324',
-    floor, num_technicians: techs, urgency,
+    quantity: +document.getElementById('qty').value||1,
+    zip_code: document.getElementById('zip').value||'91324',
+    floor: state.floor,
+    num_technicians: state.techs,
+    urgency: state.urgency,
     modifier_ids: [],
-    notes: `${optSummary} | ${document.getElementById('notes').value}`,
+    notes: document.getElementById('notes').value,
   };
 
   try {
-    const res = await fetch(`${API}/api/calculate`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
-    if (!res.ok) throw new Error((await res.json()).detail);
-    const result = await res.json();
-    showResult(result, currentProduct.label);
-    // Load similar jobs
-    const catMap = {
-      'residential_single': 'single_pane',
-      'residential_igu': 'double_pane_igu',
-      'residential_foggy': 'double_pane_igu',
-      'commercial_storefront': 'commercial_storefront',
-      'shower_door': 'shower_door',
-      'shower_mirror': 'mirror',
-      'specialty_tabletop': 'custom_tempered',
-      'specialty_laminated': 'laminated',
-    };
-    const hcpCat = catMap[currentProduct.id] || 'single_pane';
-    await loadSimilarJobs(hcpCat, result.total_area_sqft);
+    const d = await fetchJSON('/api/calculate', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    showResult(d);
+    loadSimilar(HCP[curProduct.id]||'single_pane', d.total_area_sqft);
   } catch(e) {
-    document.getElementById('result').innerHTML = `<div class="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm">❌ ${e.message}</div>`;
+    document.getElementById('resultArea').innerHTML = `<div class="card border-red-200 bg-red-50 text-red-700 text-sm p-4">❌ ${e.message}</div>`;
   }
-  btn.textContent = '💰 Calculate Price'; btn.disabled = false;
-  document.getElementById('result').scrollIntoView({behavior:'smooth'});
 }
 
-function showResult(d, label) {
-  const opts = Object.entries(currentOptions)
-    .filter(([k,v]) => v && v !== '' && !(Array.isArray(v) && v.length===0))
-    .map(([k,v]) => `<span class="inline-block bg-gray-100 text-gray-600 text-xs rounded px-2 py-0.5 mr-1 mb-1">${Array.isArray(v)?v.join('+'):v}</span>`)
+function showResult(d) {
+  const opts = Object.entries(curOpts)
+    .filter(([k,v])=>v&&!(Array.isArray(v)&&!v.length))
+    .map(([k,v])=>`<span class="inline-block bg-gray-100 text-gray-600 text-xs rounded-full px-2 py-0.5 mr-1">${Array.isArray(v)?v.join('+'):v}</span>`)
     .join('');
 
-  const notes = d.notes.filter(n=>n).map(n=>`<li class="text-sm">${n}</li>`).join('');
+  const notes = (d.notes||[]).filter(n=>n).map(n=>`<div class="text-xs text-orange-700 mt-1">⚠️ ${n}</div>`).join('');
 
-  document.getElementById('result').innerHTML = `
-    <div class="result-box bg-white rounded-xl border-2 border-blue-600 p-5 shadow-md">
-      <p class="text-sm text-gray-500 mb-1">${label} • ${d.total_area_sqft} sqft • ${d.location||'Local'}</p>
-      <div class="mb-1">${opts}</div>
-      <div class="text-3xl font-bold text-blue-600 mb-0.5">$${d.grand_total_min.toLocaleString()} – $${d.grand_total_max.toLocaleString()}</div>
-      <p class="text-xs text-gray-400 mb-4">includes LA tax 10.25%</p>
+  document.getElementById('resultArea').innerHTML = `
+  <div class="card result-in border-2 border-blue-600 shadow-md">
+    <div class="text-xs text-gray-500 mb-1">${d.service_name} · ${d.total_area_sqft} sqft · ${d.location||'Local'}</div>
+    <div class="mb-2">${opts}</div>
 
-      <div class="bg-gray-50 rounded-lg p-3 space-y-1.5 text-sm mb-4">
-        <div class="flex justify-between"><span class="text-gray-500">Material</span><span>$${d.breakdown.material_min.toFixed(0)} – $${d.breakdown.material_max.toFixed(0)}</span></div>
-        <div class="flex justify-between"><span class="text-gray-500">Labor</span><span>$${d.breakdown.labor_min.toFixed(0)} – $${d.breakdown.labor_max.toFixed(0)}</span></div>
-        ${d.breakdown.travel_cost>0?`<div class="flex justify-between"><span class="text-gray-500">Travel (${d.location})</span><span>$${d.breakdown.travel_cost.toFixed(0)}</span></div>`:''}
-        ${d.breakdown.floor_surcharge>0?`<div class="flex justify-between text-orange-600"><span>Floor</span><span>+$${d.breakdown.floor_surcharge}</span></div>`:''}
-        ${d.breakdown.extra_tech_cost>0?`<div class="flex justify-between text-orange-600"><span>Extra tech</span><span>+$${d.breakdown.extra_tech_cost.toFixed(0)}</span></div>`:''}
-        ${d.breakdown.urgency_label?`<div class="text-orange-500 text-xs">${d.breakdown.urgency_label}</div>`:''}
-        <div class="border-t pt-1.5 flex justify-between font-semibold"><span>Subtotal</span><span>$${d.total_min.toFixed(0)} – $${d.total_max.toFixed(0)}</span></div>
-        <div class="flex justify-between text-gray-400 text-xs"><span>Tax 10.25%</span><span>$${d.tax_min.toFixed(0)} – $${d.tax_max.toFixed(0)}</span></div>
+    <div class="text-3xl font-bold text-blue-600 mb-0.5">
+      $${d.grand_total_min.toLocaleString()} – $${d.grand_total_max.toLocaleString()}
+    </div>
+    <div class="text-xs text-gray-400 mb-4">includes LA tax 10.25%</div>
+
+    <div class="bg-gray-50 rounded-xl p-3 space-y-1.5 text-sm mb-3">
+      <div class="flex justify-between">
+        <span class="text-gray-500">Material</span>
+        <span class="font-medium">$${d.breakdown.material_min.toFixed(0)} – $${d.breakdown.material_max.toFixed(0)}</span>
       </div>
-      ${notes?`<ul class="text-sm text-gray-600 space-y-1 mb-4">${notes}</ul>`:''}
-      <div class="flex gap-2">
-        <button onclick="window.print()" class="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg text-sm">🖨️ Print</button>
-        <button onclick="copyResult()" class="flex-1 bg-blue-600 text-white py-2.5 rounded-lg text-sm font-medium">📋 Copy</button>
+      <div class="flex justify-between">
+        <span class="text-gray-500">Labor</span>
+        <span class="font-medium">$${d.breakdown.labor_min.toFixed(0)} – $${d.breakdown.labor_max.toFixed(0)}</span>
       </div>
-    </div>`;
+      ${d.breakdown.travel_cost>0?`<div class="flex justify-between"><span class="text-gray-500">Travel (${d.location})</span><span>$${d.breakdown.travel_cost.toFixed(0)}</span></div>`:''}
+      ${d.breakdown.floor_surcharge>0?`<div class="flex justify-between text-orange-600"><span>Floor surcharge</span><span>+$${d.breakdown.floor_surcharge}</span></div>`:''}
+      ${d.breakdown.extra_tech_cost>0?`<div class="flex justify-between text-orange-600"><span>Extra technician</span><span>+$${d.breakdown.extra_tech_cost.toFixed(0)}</span></div>`:''}
+      ${d.breakdown.urgency_label?`<div class="text-orange-500 text-xs">${d.breakdown.urgency_label}</div>`:''}
+      <div class="border-t border-gray-200 pt-1.5 flex justify-between font-semibold">
+        <span>Subtotal</span><span>$${d.total_min.toFixed(0)} – $${d.total_max.toFixed(0)}</span>
+      </div>
+      <div class="flex justify-between text-gray-400 text-xs">
+        <span>Tax 10.25%</span><span>$${d.tax_min.toFixed(0)} – $${d.tax_max.toFixed(0)}</span>
+      </div>
+    </div>
+
+    ${notes}
+
+    <div class="flex gap-2 mt-3">
+      <button onclick="copyResult()" class="flex-1 bg-blue-600 text-white rounded-xl py-2.5 text-sm font-semibold">📋 Copy</button>
+      <button onclick="window.print()" class="flex-1 border border-gray-300 text-gray-700 rounded-xl py-2.5 text-sm">🖨 Print</button>
+    </div>
+  </div>`;
   window._lastResult = d;
-  window._lastLabel = label;
+  window._lastLabel = d.service_name;
 }
 
-async function loadSimilarJobs(category, area) {
-  const el = document.getElementById('similarJobs');
-  if (!category || !area || area < 0.5) { el.innerHTML=''; return; }
+async function loadSimilar(cat, area) {
+  const el = document.getElementById('similarArea');
+  if (!cat || !area || area < 0.3) { el.innerHTML=''; return; }
   try {
-    const res = await fetch(`${API}/api/similar-jobs?category=${category}&area_sqft=${area}`);
-    const jobs = await res.json();
+    const jobs = await fetchJSON(`/api/similar-jobs?category=${cat}&area_sqft=${area}`);
     if (!jobs.length) { el.innerHTML=''; return; }
-    let rows = jobs.map(j => {
-      const feats = (j.features||[]).join(', ');
-      return `<tr class="border-b border-gray-100 last:border-0">
-        <td class="py-2 pr-3 text-sm text-gray-600 font-medium">#${j.invoice}</td>
-        <td class="py-2 pr-3 text-sm text-gray-500">${j.area_sqft} sqft</td>
-        <td class="py-2 pr-3 text-sm font-semibold text-blue-700">$${j.price.toLocaleString()}</td>
-        <td class="py-2 pr-3 text-xs text-gray-400">${j.price_per_sqft}/sqft</td>
-        <td class="py-2 text-xs text-gray-400">${j.zip_code||''} ${j.date||''}</td>
+    const rows = jobs.map(j=>`
+      <tr class="border-b border-amber-100 last:border-0">
+        <td class="py-1.5 pr-2 text-xs text-gray-600 font-medium">#${j.invoice}</td>
+        <td class="py-1.5 pr-2 text-xs text-gray-500">${j.area_sqft}sf</td>
+        <td class="py-1.5 pr-2 text-xs font-semibold text-blue-700">$${j.price.toLocaleString()}</td>
+        <td class="py-1.5 text-xs text-gray-400">${j.zip_code||''} ${j.date?j.date.slice(0,7):''}</td>
       </tr>
-      <tr><td colspan="5" class="pb-2 text-xs text-gray-400">${j.description.substring(0,80)}${feats?' | '+feats:''}</td></tr>`;
-    }).join('');
-    el.innerHTML = `
-      <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
-        <h3 class="font-semibold text-amber-800 mb-2 text-sm">📋 Similar past jobs (${jobs.length} found)</h3>
-        <table class="w-full">${rows}</table>
-      </div>`;
+      <tr><td colspan="4" class="pb-2 text-xs text-gray-400 leading-tight">${j.description.slice(0,80)}</td></tr>`
+    ).join('');
+    el.innerHTML = `<div class="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+      <div class="text-xs font-semibold text-amber-800 mb-2">📋 Similar past jobs (${jobs.length} found)</div>
+      <table class="w-full">${rows}</table>
+    </div>`;
   } catch(e) { el.innerHTML=''; }
+}
+
+function clearResults() {
+  document.getElementById('resultArea').innerHTML = '';
+  document.getElementById('similarArea').innerHTML = '';
 }
 
 function copyResult() {
   const d = window._lastResult;
-  const text = `ESTIMATE — ${window._lastLabel}\nArea: ${d.total_area_sqft} sqft | ${d.location}\n\nMaterial: $${d.breakdown.material_min}–$${d.breakdown.material_max}\nLabor: $${d.breakdown.labor_min}–$${d.breakdown.labor_max}\n${d.breakdown.travel_cost>0?`Travel: $${d.breakdown.travel_cost}\n`:''}TOTAL: $${d.total_min}–$${d.total_max}\nTax: $${d.tax_min}–$${d.tax_max}\nGRAND TOTAL: $${d.grand_total_min}–$${d.grand_total_max}\n\nFast Glass & Windows — 213-566-8886`;
-  navigator.clipboard.writeText(text).then(()=>alert('Copied!'));
+  if(!d) return;
+  const text = `ESTIMATE — ${window._lastLabel}\nArea: ${d.total_area_sqft} sqft | ${d.location}\n\nMaterial: $${d.breakdown.material_min}–$${d.breakdown.material_max}\nLabor: $${d.breakdown.labor_min}–$${d.breakdown.labor_max}\n${d.breakdown.travel_cost>0?`Travel: $${d.breakdown.travel_cost}\n`:''}TOTAL (before tax): $${d.total_min}–$${d.total_max}\nTax 10.25%: $${d.tax_min}–$${d.tax_max}\nGRAND TOTAL: $${d.grand_total_min}–$${d.grand_total_max}\n\nFast Glass & Windows — 213-566-8886`;
+  navigator.clipboard.writeText(text).then(()=>{
+    const btn = event.target;
+    btn.textContent = '✅ Copied!';
+    setTimeout(()=>btn.textContent='📋 Copy', 1500);
+  });
 }
 
 init();
