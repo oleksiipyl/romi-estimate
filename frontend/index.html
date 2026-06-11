@@ -733,6 +733,7 @@ async function doCalc(){
     notes:document.getElementById('notes').value,
     // Calculate total options surcharge on frontend (we know the product fields)
     options_add_sqft: calcOptionsSurcharge(),
+    product_min_charge: prod.min_charge || 0,
   };
   try{
     const d=await fj('/api/calculate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});

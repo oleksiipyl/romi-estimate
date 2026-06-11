@@ -62,6 +62,7 @@ class CalculateRequest(BaseModel):
     notes: str = ""
     product_options: Optional[dict] = {}
     options_add_sqft: float = 0.0  # pre-calculated surcharge from product options
+    product_min_charge: float = 0.0  # min charge from products.py
 
 
 class UpdateServiceRequest(BaseModel):
@@ -230,6 +231,7 @@ def calculate_price(req: CalculateRequest):
         modifier_ids=req.modifier_ids or [],
         notes=req.notes,
         options_add_sqft=options_add_sqft,
+        product_min_charge=req.product_min_charge or 0.0,
     )
 
     if "error" in result:

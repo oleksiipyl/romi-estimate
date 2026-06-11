@@ -63,7 +63,8 @@ def calculate(
     urgency: str = "normal",  # normal, urgent, emergency
     modifier_ids: list = None,
     notes: str = "",
-    options_add_sqft: float = 0.0  # extra $/sqft from selected product options
+    options_add_sqft: float = 0.0,  # extra $/sqft from selected product options
+    product_min_charge: float = 0.0  # min charge from products.py (e.g. shower $600)
 ) -> dict:
     """
     Main calculation function.
@@ -179,11 +180,12 @@ def calculate(
     total_min = base_min + travel_cost + floor_surcharge + extra_tech_cost + modifier_total
     total_max = base_max + travel_cost + floor_surcharge + extra_tech_cost + modifier_total
 
-    # Apply minimum charge only for very small jobs (< 4 sqft total)
-    # Standard 24x36 = 6 sqft, should NOT trigger minimum
-    if calc_area < 4.0:
-        total_min = max(total_min, min_price)
-        total_max = max(total_max, min_price + 50)
+    # Apply minimum charge from product (e.g. shower $600) or global min ($150)
+    effective_min = max(product_min_charge, min_price) if product_min_charge > 0 else min_price
+    if total_min < effective_min:
+        total_min = effective_min
+    if total_max < effective_min:
+        total_max = effective_min + 50
 
     # Narrow the range: max should not be more than 60% above min
     # This prevents unrealistic $2000 spread
