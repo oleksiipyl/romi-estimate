@@ -147,11 +147,39 @@ PRODUCTS = {
                 "label": "Grids",
                 "type": "radio",
                 "default": "none",
+                "collapsed": True,
                 "options": [
-                    {"value": "none",  "label": "No Grids",                          "price_add_unit": 0},
-                    {"value": "flat",  "label": "Flat Grids (inside unit)",           "price_add_unit": 45},
-                    {"value": "sdl",   "label": "SDL — Simulated Divided Lights",    "price_add_unit": 55},
-                    {"value": "gbg",   "label": "GBG — Grilles Between Glass",       "price_add_unit": 65},
+                    {"value": "none",       "label": "No Grids",                          "price_add_unit": 0},
+                    {"value": "flat",       "label": "Flat Grids (inside unit)",           "price_add_unit": 45},
+                    {"value": "sdl",        "label": "SDL — Simulated Divided Lights",    "price_add_unit": 55},
+                    {"value": "gbg",        "label": "GBG — Grilles Between Glass",       "price_add_unit": 65},
+                    {"value": "sculptured", "label": "Sculptured (3D profile)",            "price_add_unit": 75},
+                ]
+            },
+            {
+                "id": "grid_width",
+                "label": "Grid Width",
+                "type": "radio",
+                "default": "5/8",
+                "show_if": {"field": "grids", "value_not": "none"},
+                "options": [
+                    {"value": "5/8",  "label": "5/8\" (standard)", "price_add_unit": 0},
+                    {"value": "3/4",  "label": "3/4\"",            "price_add_unit": 10},
+                    {"value": "1",    "label": "1\"",              "price_add_unit": 15},
+                ]
+            },
+            {
+                "id": "grid_color",
+                "label": "Grid Color",
+                "type": "radio",
+                "default": "white",
+                "show_if": {"field": "grids", "value_not": "none"},
+                "options": [
+                    {"value": "white",      "label": "White",         "price_add_unit": 0},
+                    {"value": "tan",        "label": "Tan / Beige",   "price_add_unit": 0},
+                    {"value": "bronze",     "label": "Bronze",        "price_add_unit": 10},
+                    {"value": "black",      "label": "Black",         "price_add_unit": 10},
+                    {"value": "woodgrain",  "label": "Wood Grain",    "price_add_unit": 20},
                 ]
             },
         ]
