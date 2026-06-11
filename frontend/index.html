@@ -409,14 +409,17 @@ function showResult(d){
   showMarketBadge(d);
 }
 
+// Market benchmarks — Victor's research 2026-06-11
+// Sources: Angi, Modernize, HCP 956 jobs historical
 const MARKET = {
-  single_pane:          {avg:82,  low:55,  high:130, label:'Single Pane'},
-  double_pane_igu:      {avg:91,  low:66,  high:127, label:'Double Pane IGU'},
-  single_pane_tempered: {avg:79,  low:44,  high:92,  label:'Tempered'},
-  laminated:            {avg:140, low:64,  high:257, label:'Laminated'},
-  shower_door:          {avg:160, low:64,  high:273, label:'Shower Door'},
-  mirror:               {avg:68,  low:39,  high:267, label:'Mirror'},
-  commercial_storefront:{avg:93,  low:70,  high:138, label:'Storefront'},
+  single_pane:          {avg:82,  low:55,  high:130, our:125, label:'Single Pane'},
+  double_pane_igu:      {avg:105, low:70,  high:160, our:116, label:'Double Pane IGU'},
+  single_pane_tempered: {avg:79,  low:44,  high:92,  our:79,  label:'Tempered'},
+  laminated:            {avg:110, low:64,  high:200, our:140, label:'Laminated'},
+  shower_door:          {avg:130, low:64,  high:200, our:161, label:'Shower Door'},
+  mirror:               {avg:65,  low:39,  high:130, our:125, label:'Mirror'},
+  commercial_storefront:{avg:93,  low:70,  high:138, our:93,  label:'Storefront'},
+  custom_tempered:      {avg:87,  low:41,  high:152, our:87,  label:'Custom Tempered'},
 };
 
 function showMarketBadge(d) {
