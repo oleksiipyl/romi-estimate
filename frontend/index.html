@@ -171,21 +171,61 @@
 
     /* Scrollbar for textarea */
     textarea { resize: none; }
+
+    /* Header */
+    .app-header { min-width: 0; }
+    .app-header-title { min-width: 0; }
+    .app-status { flex-shrink: 0; max-width: 72px; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* Category pills — 2×2 grid on narrow screens */
+    .category-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+    .category-grid .pill {
+      width: 100%;
+      height: 40px;
+      font-size: 13px;
+      padding: 0 10px;
+    }
+
+    /* Mobile 375px optimizations */
+    @media (max-width: 400px) {
+      .section-card { padding: 12px; margin-bottom: 8px; border-radius: 12px; }
+      .section-label { margin-bottom: 8px; font-size: 10px; }
+      .dim-input { width: 44px; padding: 6px 2px; font-size: 13px; }
+      .dim-select { font-size: 12px; padding: 6px 4px; }
+      .product-card { height: 64px; padding: 0 10px; }
+      .product-card .flex-1 { font-size: 12px; }
+      .area-preview {
+        height: auto; min-height: 40px;
+        padding: 8px 10px; font-size: 12px;
+        line-height: 1.35; word-break: break-word;
+      }
+      #result-price { font-size: 1.5rem !important; }
+      .zip-badge { font-size: 11px; max-width: 100%; }
+      .zip-row { flex-wrap: wrap; }
+      .seg-btn { font-size: 12px; min-height: 44px; }
+      .urgency-btn { font-size: 12px; min-height: 44px; }
+      main { padding-left: 12px !important; padding-right: 12px !important; }
+      header .max-w-lg { padding-left: 12px !important; padding-right: 12px !important; }
+    }
   </style>
 </head>
 <body>
 
 <!-- STICKY HEADER -->
 <header class="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
-  <div class="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
-    <div class="flex items-center gap-2">
-      <span class="text-xl">🪟</span>
-      <div>
-        <div class="font-bold text-gray-900 text-sm leading-tight">Glass Estimate</div>
-        <div class="text-xs text-gray-400 leading-tight">Glass Price Calculator</div>
+  <div class="max-w-lg mx-auto px-4 py-2.5 flex items-center justify-between gap-2">
+    <div class="app-header flex items-center gap-2 min-w-0">
+      <span class="text-lg flex-shrink-0">🪟</span>
+      <div class="app-header-title min-w-0">
+        <div class="font-bold text-gray-900 text-sm leading-tight truncate">Glass Estimate</div>
+        <div class="text-[11px] text-gray-500 leading-tight truncate">Fast Glass &amp; Windows</div>
       </div>
     </div>
-    <div id="calc-status" class="text-xs text-gray-400">Ready</div>
+    <div id="calc-status" class="app-status text-[10px] text-gray-400">Ready</div>
   </div>
 </header>
 
@@ -195,10 +235,10 @@
   <!-- STEP 1: CATEGORY -->
   <div class="section-card">
     <div class="section-label">What needs to be done?</div>
-    <div class="pills-row" id="category-pills">
+    <div class="category-grid" id="category-pills">
       <button class="pill selected" data-cat="residential">🏠 Residential</button>
       <button class="pill" data-cat="commercial">🏢 Commercial</button>
-      <button class="pill" data-cat="shower">🚿 Shower &amp; Bath</button>
+      <button class="pill" data-cat="shower">🚿 Shower</button>
       <button class="pill" data-cat="specialty">✨ Specialty</button>
     </div>
   </div>
@@ -225,7 +265,7 @@
   <!-- STEP 4: DIMENSIONS -->
   <div class="section-card">
     <div class="section-label">Dimensions</div>
-    <div class="grid grid-cols-2 gap-4">
+    <div class="grid grid-cols-2 gap-2 sm:gap-4">
       <!-- WIDTH -->
       <div>
         <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">Width</div>
@@ -291,12 +331,13 @@
     <!-- ZIP -->
     <div class="mb-4">
       <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">ZIP Code</div>
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2 zip-row">
         <input
           type="text" id="zip-input" maxlength="5"
           placeholder="90210"
-          class="dim-select text-base font-mono w-24"
+          class="dim-select text-base font-mono w-24 flex-shrink-0"
           style="height:44px; font-size:15px; letter-spacing:0.05em;"
+          inputmode="numeric"
         />
         <div id="zip-badge" class="zip-badge" style="display:none"></div>
         <div id="zip-loading" style="display:none"><div class="spinner" style="width:14px;height:14px;"></div></div>
@@ -327,8 +368,8 @@
     <div class="mb-4">
       <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">Urgency</div>
       <div class="flex flex-col gap-2" id="urgency-btns">
-        <button class="urgency-btn selected" data-urgency="standard">Standard</button>
-        <button class="urgency-btn" data-urgency="same_day">Same-Day &nbsp;<span class="text-[11px] font-normal text-gray-400">+30%</span></button>
+        <button class="urgency-btn selected" data-urgency="normal">Standard (3–5 days)</button>
+        <button class="urgency-btn" data-urgency="urgent">Same-Day &nbsp;<span class="text-[11px] font-normal text-gray-400">+30%</span></button>
         <button class="urgency-btn" data-urgency="emergency">Emergency &nbsp;<span class="text-[11px] font-normal text-gray-400">+50%</span></button>
       </div>
     </div>
@@ -373,9 +414,7 @@
   </div>
 
   <!-- SIMILAR JOBS (hidden until calc) -->
-  <div id="similar-section" style="display:none"
-    class="fade-in rounded-xl p-3 mb-4 border border-amber-300"
-    style="background:#FFFBEB; border-color:#FCD34D;">
+  <div id="similar-section" class="fade-in rounded-xl p-3 mb-4 border border-amber-300" style="display:none; background:#FFFBEB; border-color:#FCD34D;">
     <div class="font-semibold text-sm text-amber-800 mb-2">📋 Similar past jobs</div>
     <div id="similar-table" class="text-xs text-amber-900">
       <!-- Populated by JS -->
@@ -435,7 +474,7 @@ const state = {
   zipData: null,
   floor: 1,
   numTechs: 1,
-  urgency: 'standard',
+  urgency: 'normal',
   notes: '',
   calcResult: null,
   calcTimer: null,
@@ -529,7 +568,8 @@ async function fetchProducts(category, keys) {
     const catData = data.find(c => c.category_id === category);
     if (catData && catData.products) {
       return catData.products.map(p => ({
-        key: p.id, id: p.id,
+        key: p.id,
+        id: SVC[p.id] || 1,
         label: p.label,
         desc: p.description || ''
       }));
@@ -550,7 +590,7 @@ function selectProduct(key, id) {
   document.querySelectorAll('#product-grid .product-card').forEach(c => {
     c.classList.toggle('selected', c.dataset.key === key);
   });
-  loadOptions(state.serviceId);
+  loadOptions(key);
   scheduleCalc();
 }
 
@@ -559,14 +599,14 @@ function hideOptions() {
   document.getElementById('options-section').style.display = 'none';
 }
 
-async function loadOptions(serviceId) {
+async function loadOptions(productKey) {
   const section = document.getElementById('options-section');
   const fields = document.getElementById('options-fields');
   fields.innerHTML = '<div class="flex justify-center py-3"><div class="spinner"></div></div>';
   section.style.display = 'block';
 
   try {
-    const resp = await fetch(`/api/products/${serviceId}`);
+    const resp = await fetch(`/api/products/${productKey}`);
     if (!resp.ok) throw new Error('not ok');
     const data = await resp.json();
     if (data.fields && data.fields.length > 0) {
@@ -795,7 +835,7 @@ async function runCalc() {
     height_in: state.heightIn,
     height_frac: state.heightFrac,
     quantity: state.quantity,
-    zip_code: state.zipCode || null,
+    zip_code: state.zipCode || '91324',
     floor: state.floor,
     num_technicians: state.numTechs,
     urgency: state.urgency,
@@ -813,7 +853,7 @@ async function runCalc() {
     const data = await resp.json();
     state.calcResult = data;
     renderResult(data);
-    fetchSimilarJobs(state.category, area);
+    fetchSimilarJobs(state.productKey, data.total_area_sqft || area);
     setStatus('Updated');
   } catch(err) {
     // Fallback: client-side estimate
@@ -836,7 +876,7 @@ function clientSideEstimate(area) {
   };
   const [rMin, rMax] = rates[state.productKey] || [20, 35];
   const qty = state.quantity;
-  const urgMulti = { standard: 1, same_day: 1.30, emergency: 1.50 };
+  const urgMulti = { normal: 1, urgent: 1.30, emergency: 1.50 };
   const floorAdd = { 1: 0, 2: 150, 3: 300 };
   const zipMult = state.zipData?.multiplier || 1;
   const tax = 1.1025;
@@ -864,32 +904,52 @@ function renderResult(data) {
   void section.offsetWidth;
   section.classList.add('fade-in');
 
-  document.getElementById('result-price').textContent = fmtRange(data.price_min, data.price_max);
+  const priceMin = data.grand_total_min ?? data.price_min;
+  const priceMax = data.grand_total_max ?? data.price_max;
+  document.getElementById('result-price').textContent = fmtRange(priceMin, priceMax);
 
-  // Tax note
   const taxNote = document.getElementById('result-tax-note');
-  taxNote.textContent = 'includes LA tax 10.25%';
+  const meta = [data.service_name, data.total_area_sqft ? data.total_area_sqft + ' sqft' : null, data.location].filter(Boolean).join(' · ');
+  taxNote.textContent = (meta ? meta + ' · ' : '') + 'includes LA tax 10.25%';
 
-  // Breakdown table
   const table = document.getElementById('breakdown-table');
-  if (data.breakdown && data.breakdown.length > 0) {
-    table.innerHTML = data.breakdown.map(row => {
-      const val = row.pct
-        ? (row.min * 100).toFixed(0) + '%'
-        : fmtRange(row.min, row.max);
+  let rowsHtml = '';
+
+  if (Array.isArray(data.breakdown) && data.breakdown.length > 0) {
+    rowsHtml = data.breakdown.map(row => {
+      const val = row.pct ? (row.min * 100).toFixed(0) + '%' : fmtRange(row.min, row.max);
       return `<div class="breakdown-row"><span class="text-gray-600">${row.label}</span><span class="font-medium text-gray-900">${val}</span></div>`;
-    }).join('') + `<div class="breakdown-row"><span>Total</span><span>${fmtRange(data.price_min, data.price_max)}</span></div>`;
-  } else {
-    table.innerHTML = `<div class="breakdown-row"><span>Estimated Total</span><span>${fmtRange(data.price_min, data.price_max)}</span></div>`;
+    }).join('');
+  } else if (data.breakdown && typeof data.breakdown === 'object') {
+    const b = data.breakdown;
+    const rows = [
+      ['Material', fmtRange(b.material_min, b.material_max)],
+      ['Labor', fmtRange(b.labor_min, b.labor_max)],
+      b.travel_cost > 0 ? ['Travel', fmt(b.travel_cost)] : null,
+      b.floor_surcharge > 0 ? ['Floor', fmt(b.floor_surcharge)] : null,
+      b.extra_tech_cost > 0 ? ['Extra tech', fmt(b.extra_tech_cost)] : null,
+      b.urgency_label ? [b.urgency_label, ''] : null,
+      ['Subtotal', fmtRange(data.total_min, data.total_max)],
+      ['Tax', fmtRange(data.tax_min, data.tax_max)]
+    ].filter(Boolean);
+    rowsHtml = rows.map(([l, v]) =>
+      `<div class="breakdown-row"><span class="text-gray-600">${l}</span><span class="font-medium text-gray-900">${v}</span></div>`
+    ).join('');
   }
+
+  table.innerHTML = rowsHtml
+    ? rowsHtml + `<div class="breakdown-row"><span>Total</span><span>${fmtRange(priceMin, priceMax)}</span></div>`
+    : `<div class="breakdown-row"><span>Estimated Total</span><span>${fmtRange(priceMin, priceMax)}</span></div>`;
 }
 
 // ─── SIMILAR JOBS ─────────────────────────────────────────────────────────────
-async function fetchSimilarJobs(category, areaSqft) {
+async function fetchSimilarJobs(productKey, areaSqft) {
   const section = document.getElementById('similar-section');
+  const cat = HCP[productKey];
   section.style.cssText = 'display:none';
+  if (!cat || !areaSqft) return;
   try {
-    const resp = await fetch(`/api/similar-jobs?category=${encodeURIComponent(category)}&area_sqft=${areaSqft.toFixed(2)}`);
+    const resp = await fetch(`/api/similar-jobs?category=${encodeURIComponent(cat)}&area_sqft=${areaSqft.toFixed(2)}`);
     if (!resp.ok) throw new Error();
     const data = await resp.json();
     if (!data || !data.length) return;
@@ -903,10 +963,11 @@ async function fetchSimilarJobs(category, areaSqft) {
         </tr></thead>
         <tbody>
           ${rows.map(r => `<tr class="border-b border-amber-100 last:border-0">
-            <td class="py-1 pr-2 text-amber-900">${r.label || r.service || '—'}</td>
-            <td class="py-1 text-right text-amber-700">${r.area_sqft ? r.area_sqft.toFixed(1) + ' sqft' : '—'}</td>
+            <td class="py-1 pr-2 text-amber-900">#${r.invoice || '—'}</td>
+            <td class="py-1 text-right text-amber-700">${r.area_sqft ? r.area_sqft.toFixed(1) + ' sf' : '—'}</td>
             <td class="py-1 text-right font-medium text-amber-900">${r.price ? fmt(r.price) : '—'}</td>
-          </tr>`).join('')}
+          </tr>
+          <tr><td colspan="3" class="pb-2 text-amber-700/80 leading-tight">${(r.description || '').slice(0, 60)}</td></tr>`).join('')}
         </tbody>
       </table>`;
     document.getElementById('similar-table').innerHTML = tableHTML;
@@ -925,7 +986,7 @@ document.getElementById('copy-btn').addEventListener('click', () => {
   const product = PRODUCT_LABELS[state.productKey]?.label || state.productKey || 'Glass';
   const area = calcAreaSqft();
   const text = [
-    'ROMI Glass Estimate',
+    'Glass Estimate — Fast Glass & Windows',
     '──────────────────',
     `Service: ${product}`,
     `Size: ${dimLabel()} (${area.toFixed(2)} sqft)`,
@@ -933,7 +994,7 @@ document.getElementById('copy-btn').addEventListener('click', () => {
     state.zipCode ? `Location: ${state.zipData?.city || state.zipCode}` : null,
     `Floor: ${state.floor}`,
     `Urgency: ${state.urgency}`,
-    `Price: ${fmtRange(state.calcResult.price_min, state.calcResult.price_max)}`,
+    `Price: ${fmtRange(state.calcResult.grand_total_min ?? state.calcResult.price_min, state.calcResult.grand_total_max ?? state.calcResult.price_max)}`,
     state.notes ? `Notes: ${state.notes}` : null,
     '',
     'Generated by Glass Estimate — Fast Glass & Windows'
