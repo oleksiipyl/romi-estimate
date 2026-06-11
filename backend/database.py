@@ -271,7 +271,7 @@ def seed_settings():
     settings = [
         ("labor_rate_per_hour", "85", "$/hour for 1 technician"),
         ("travel_rate_per_hour", "85", "$/hour travel time (each way)"),
-        ("second_floor_surcharge", "150", "$ extra for 2nd floor"),
+        ("second_floor_surcharge", "200", "$ extra for 2nd floor"),
         ("third_floor_surcharge", "300", "$ extra for 3rd floor+"),
         ("scaffold_surcharge", "250", "$ extra if scaffold needed"),
         ("extra_tech_rate", "75", "$/hour for each additional technician"),

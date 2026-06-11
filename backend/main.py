@@ -125,7 +125,8 @@ def get_products_api():
         "category_label": "🔧 Hardware",
         "products": [
             {"id": p["id"], "label": p["label"], "description": p["description"],
-             "price_per_sqft_min": p["price_min"], "price_per_sqft_max": p["price_max"]}
+             "price_per_sqft_min": p["price_min"], "price_per_sqft_max": p["price_max"],
+             "min_charge": p.get("min_charge", 0), "category": "hardware"}
             for p in HARDWARE_PRODUCTS
         ]
     })
@@ -146,6 +147,7 @@ def get_product_api(product_id: str):
             "service_id": hw["service_id"],
             "price_min": hw["price_min"],
             "price_max": hw["price_max"],
+            "min_charge": hw.get("min_charge", 0),
             "is_flat_price": True,
             "fields": [
                 {

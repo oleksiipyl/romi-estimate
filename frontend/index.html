@@ -101,6 +101,17 @@
     <!-- Qty removed — each piece counted separately -->
   </div>
 
+  <!-- HW QTY -->
+  <div class="bg-white rounded-2xl border border-gray-200 p-3" id="hwQtySection" style="display:none">
+    <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2.5">Quantity</div>
+    <div class="flex items-center gap-3">
+      <button onclick="hwQty=Math.max(1,hwQty-1);document.getElementById('hwQtyVal').textContent=hwQty;sched()" class="w-10 h-10 rounded-xl border-2 border-gray-200 text-xl font-bold text-gray-600">−</button>
+      <span id="hwQtyVal" class="text-2xl font-bold text-gray-800 w-8 text-center">1</span>
+      <button onclick="hwQty++;document.getElementById('hwQtyVal').textContent=hwQty;sched()" class="w-10 h-10 rounded-xl border-2 border-gray-200 text-xl font-bold text-gray-600">+</button>
+      <span class="text-sm text-gray-400">units</span>
+    </div>
+  </div>
+
   <!-- 5. LOCATION & JOB -->
   <div class="bg-white rounded-2xl border border-gray-200 p-3" id="jobSection" style="display:none">
     <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2.5">Location & Details</div>
@@ -159,7 +170,7 @@ const SVC={residential_single:1,residential_igu:2,residential_foggy:13,commercia
 const HCP={residential_single:'single_pane',residential_igu:'double_pane_igu',residential_foggy:'double_pane_igu',commercial_storefront:'commercial_storefront',shower_door:'shower_door',shower_mirror:'mirror',specialty_tabletop:'custom_tempered',specialty_laminated:'laminated'};
 const FRAC={'0':0,'1/8':.125,'1/4':.25,'3/8':.375,'1/2':.5,'5/8':.625,'3/4':.75,'7/8':.875};
 
-let cats=[], prod=null, opts={}, state={floor:1,techs:1,urgency:'normal'}, timer=null;
+let cats=[], prod=null, opts={}, state={floor:1,techs:1,urgency:'normal'}, timer=null, hwQty=1;
 
 async function init(){
   try{
@@ -196,9 +207,11 @@ function selCat(cat,btn){
   prod=null; opts={};
   document.getElementById('optArea').innerHTML='';
   document.getElementById('dimSection').style.display='none';
+  document.getElementById('hwQtySection').style.display='none';
   document.getElementById('jobSection').style.display='none';
   document.getElementById('resultArea').innerHTML='';
   document.getElementById('similarArea').innerHTML='';
+  hwQty=1; document.getElementById('hwQtyVal').textContent='1';
   renderProds(cat.products);
   document.getElementById('prodSection').style.display='block';
 }
@@ -209,7 +222,9 @@ function renderProds(ps){
   ps.forEach(p=>{
     const btn=document.createElement('button');
     btn.className='card-sel border-2 border-gray-200 rounded-xl p-2.5 text-left';
-    btn.innerHTML=`<div class="font-semibold text-gray-800 text-sm leading-tight">${p.label}</div><div class="text-blue-600 font-bold text-sm mt-1">$${p.price_per_sqft_min}–$${p.price_per_sqft_max}<span class="text-gray-400 text-xs font-normal">/sf</span></div>`;
+    const isHwCard = p.category==='hardware' || p.is_flat_price;
+    const priceLabel = isHwCard ? `$${p.price_per_sqft_min}–$${p.price_per_sqft_max}` : `$${p.price_per_sqft_min}–$${p.price_per_sqft_max}<span class="text-gray-400 text-xs font-normal">/sf</span>`;
+    btn.innerHTML=`<div class="font-semibold text-gray-800 text-sm leading-tight">${p.label}</div><div class="text-blue-600 font-bold text-sm mt-1">${priceLabel}</div>`;
     btn.onclick=()=>selProd(p.id,btn);
     g.appendChild(btn);
   });
@@ -225,6 +240,7 @@ async function selProd(id,btn){
   // Hardware: no dimensions needed
   const isHw = prod.is_flat_price || prod.category==='hardware';
   document.getElementById('dimSection').style.display=isHw?'none':'block';
+  document.getElementById('hwQtySection').style.display=isHw?'block':'none';
   document.getElementById('jobSection').style.display='block';
   setTimeout(()=>document.getElementById('dimSection').scrollIntoView({behavior:'smooth',block:'nearest'}),80);
   sched();
@@ -356,10 +372,18 @@ function sched(){
 
 async function doCalc(){
   if(!prod) return;
-  if(prod.is_flat_price){
-    const condAdd=opts['condition']==='difficult'?25:opts['condition']==='damaged'?40:0;
-    const mn=prod.price_min+condAdd, mx=prod.price_max+condAdd;
-    document.getElementById('resultArea').innerHTML=`<div class="result-in bg-white rounded-2xl border-2 border-blue-600 p-4 shadow-md"><div class="text-xs text-gray-500 mb-1">${prod.label} · per unit</div><div class="text-3xl font-bold text-blue-600 mb-0.5">${'$'+mn}–${'$'+mx}</div><div class="text-xs text-gray-400 mb-3">Estimate per unit</div><button onclick="navigator.clipboard.writeText('ESTIMATE: ${prod.label}\\n$${mn}\\u2013$${mx} per unit\\nFast Glass & Windows \\u2014 213-566-8886').then(()=>{})" class="w-full bg-blue-600 text-white rounded-xl py-2.5 text-sm font-semibold">📋 Copy</button></div>`;
+  if(prod.is_flat_price || prod.category==='hardware'){
+    const qty=hwQty||1;
+    const floorAdd=state.floor===2?200:state.floor>=3?300:0;
+    const minC=prod.min_charge||0;
+    let mn=prod.price_min*qty+floorAdd;
+    let mx=prod.price_max*qty+floorAdd;
+    if(mn<minC) mn=minC;
+    if(mx<minC) mx=minC;
+    const floorNote=floorAdd>0?`<div class="text-xs text-orange-500 mt-1">⚠️ Floor +$${floorAdd}</div>`:"";
+    const qtyNote=qty>1?` · ${qty} units`:" · 1 unit";
+    const minNote=mn===minC&&minC>0?`<div class="text-xs text-gray-400">Min charge applies</div>`:"";
+    document.getElementById('resultArea').innerHTML=`<div class="result-in bg-white rounded-2xl border-2 border-blue-600 p-4 shadow-md"><div class="text-xs text-gray-500 mb-1">${prod.label}${qtyNote}</div><div class="text-3xl font-bold text-blue-600 mb-0.5">$${mn.toLocaleString()}–$${mx.toLocaleString()}</div>${minNote}${floorNote}<div class="text-xs text-gray-400 mb-3 mt-1">Estimate total</div><button onclick="navigator.clipboard.writeText('${prod.label}: $${mn}–$${mx}\nFast Glass & Windows — 213-566-8886').then(()=>{})" class="w-full bg-blue-600 text-white rounded-xl py-2.5 text-sm font-semibold">📋 Copy</button></div>`;
     document.getElementById('similarArea').innerHTML='';
     document.getElementById('marketBadge').classList.add('hidden');
     return;

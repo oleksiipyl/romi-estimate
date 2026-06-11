@@ -196,8 +196,6 @@ def calculate(
 
     # Recommendations
     recommendations = []
-    if floor >= 2 and num_technicians < 2:
-        recommendations.append("⚠️ Recommend 2 technicians for 2nd floor work")
     if floor >= 3:
         recommendations.append("⚠️ Confirm scaffold availability before booking")
     if area < 1.0:
