@@ -763,9 +763,8 @@ function showResult(d){
   document.getElementById('resultArea').innerHTML=`
   <div class="result-in bg-white rounded-2xl border-2 border-blue-600 p-4 shadow-md">
     <div class="text-xs text-gray-500 mb-1">${d.service_name} · ${d.total_area_sqft} sqft · ${d.location||'Local'}</div>
-    <div class="text-sm font-medium text-gray-600 mt-1">📞 Озвучивайте клиенту:</div>
-    <div class="text-xl font-bold text-blue-600 mb-2">$${rangeMin.toLocaleString()} – $${rangeMax.toLocaleString()}</div>
-    <div class="text-3xl font-bold text-blue-600 mb-0.5">$${midPrice.toLocaleString()} <span class="text-sm font-normal text-gray-400">estimate</span></div>
+    <div class="text-3xl font-bold text-blue-600 mb-0.5">$${midPrice.toLocaleString()}</div>
+    <div class="text-sm text-gray-500 mb-1">📞 Озвучивайте клиенту: <span class="font-semibold text-blue-600">$${rangeMin.toLocaleString()} – $${rangeMax.toLocaleString()}</span></div>
     <div id="marketBadge" class="hidden text-sm font-semibold rounded-xl px-3 py-2 mb-2 border-2"></div>
     ${techRec?`<div class="bg-amber-50 border border-amber-300 rounded-xl px-3 py-1.5 text-xs text-amber-800 mb-2">${techRec}</div>`:''}
     <div class="bg-gray-50 rounded-xl p-3 space-y-1.5 text-sm mb-3">
