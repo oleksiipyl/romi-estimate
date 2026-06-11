@@ -38,9 +38,9 @@ ALL AGENTS: Read this file. Confirm you are alive.
 | COORDINATOR | Multi-agent framework setup | `cursor/coordinator-setup-1c4b` | ✅ Merged to main |
 | SENYA | Hardware pricing + floor surcharge updates | `main` | ✅ Done |
 | SENYA | Beacon `activeagreement.md` for romi-estimate | `senya/accept-cursor-protocol` | ✅ Pushed |
-| COORDINATOR | **PING TEST** — create `docs/COORDINATOR_PING.md`: your id, timestamp, list 3 files in docs/, "I am alive". Commit+push. | cursor/coordinator-ping | **assigned** |
-| SOAP | **PING TEST** — create `docs/SOAP_PING.md`: your id, timestamp, list 3 files in docs/, "I am alive". Commit+push. | cursor/soap-ping | **assigned** |
-| CLO | **PING TEST** — create `docs/CLO_PING.md`: your id, timestamp, list 3 files in docs/, "I am alive". Commit+push. | cursor/clo-ping | **assigned** |
+| COORDINATOR | **UI REDESIGN** — Redesign `frontend/index.html`: mobile-first 375px, professional look, clean sections, brand colors (blue #2563EB + white). Keep ALL JS logic intact. Only change HTML structure and Tailwind classes. Add company logo area. Fix visual hierarchy. | cursor/ui-redesign-v3 | **assigned** |
+| SOAP | **ADMIN PANEL** — Create `frontend/admin.html`: password login (fastglass2026), table of all 51 services with inline price editing, settings editor, search/filter. Use existing API: GET /api/admin/services?password=X, PUT /api/admin/services/{id}?password=X, GET/PUT /api/admin/settings. Tailwind CSS. | cursor/admin-panel | **assigned** |
+| CLO | **STANDBY** — Wait for Phase 5 assignment. | — | **standby** |
 
 ---
 

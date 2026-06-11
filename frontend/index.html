@@ -129,7 +129,7 @@
       <div class="text-xs text-gray-500 mb-1">Floor</div>
       <div class="grid grid-cols-3 gap-1.5">
         <button onclick="setOpt('floor',1,this)" class="opt-btn on border-2 border-blue-600 bg-blue-600 text-white rounded-xl py-2 text-xs font-semibold">1st</button>
-        <button onclick="setOpt('floor',2,this)" class="opt-btn border-2 border-gray-200 text-gray-700 rounded-xl py-2 text-xs font-medium">2nd<br><span class="text-gray-400" style="font-size:10px">+$150</span></button>
+        <button onclick="setOpt('floor',2,this)" class="opt-btn border-2 border-gray-200 text-gray-700 rounded-xl py-2 text-xs font-medium">2nd<br><span class="text-gray-400" style="font-size:10px">+$200</span></button>
         <button onclick="setOpt('floor',3,this)" class="opt-btn border-2 border-gray-200 text-gray-700 rounded-xl py-2 text-xs font-medium">3rd+<br><span class="text-gray-400" style="font-size:10px">+$300</span></button>
       </div>
     </div>
@@ -383,7 +383,8 @@ async function doCalc(){
     const floorNote=floorAdd>0?`<div class="text-xs text-orange-500 mt-1">⚠️ Floor +$${floorAdd}</div>`:"";
     const qtyNote=qty>1?` · ${qty} units`:" · 1 unit";
     const minNote=mn===minC&&minC>0?`<div class="text-xs text-gray-400">Min charge applies</div>`:"";
-    document.getElementById('resultArea').innerHTML=`<div class="result-in bg-white rounded-2xl border-2 border-blue-600 p-4 shadow-md"><div class="text-xs text-gray-500 mb-1">${prod.label}${qtyNote}</div><div class="text-3xl font-bold text-blue-600 mb-0.5">$${mn.toLocaleString()}–$${mx.toLocaleString()}</div>${minNote}${floorNote}<div class="text-xs text-gray-400 mb-3 mt-1">Estimate total</div><button onclick="navigator.clipboard.writeText('${prod.label}: $${mn}–$${mx}\nFast Glass & Windows — 213-566-8886').then(()=>{})" class="w-full bg-blue-600 text-white rounded-xl py-2.5 text-sm font-semibold">📋 Copy</button></div>`;
+    const hwMid=Math.round((mn+mx)/2);
+    document.getElementById('resultArea').innerHTML=`<div class="result-in bg-white rounded-2xl border-2 border-blue-600 p-4 shadow-md"><div class="text-xs text-gray-500 mb-1">${prod.label}${qtyNote}</div><div class="text-3xl font-bold text-blue-600 mb-0.5">$${hwMid.toLocaleString()}</div><div class="text-xs text-gray-400 mb-1">📞 Озвучивайте: $${mn.toLocaleString()} – $${mx.toLocaleString()}</div>${minNote}${floorNote}<div class="text-xs text-gray-400 mb-3 mt-1">Estimate total</div><button onclick="navigator.clipboard.writeText('${prod.label}: $${hwMid}\nRange: $${mn}–$${mx}\nFast Glass & Windows — 213-566-8886').then(()=>{})" class="w-full bg-blue-600 text-white rounded-xl py-2.5 text-sm font-semibold">📋 Copy</button></div>`;
     document.getElementById('similarArea').innerHTML='';
     document.getElementById('marketBadge').classList.add('hidden');
     return;
@@ -417,23 +418,27 @@ async function doCalc(){
 
 function showResult(d){
   const notes=(d.notes||[]).filter(n=>n).map(n=>`<div class="text-xs text-orange-600 mt-1">⚠️ ${n}</div>`).join('');
+  // Single price (midpoint) + range footnote for customer calls
+  const midPrice = Math.round((d.grand_total_min + d.grand_total_max) / 2);
+  const rangeMin = d.grand_total_min;
+  const rangeMax = d.grand_total_max;
+  // Technician recommendation based on glass weight/area
+  const techRec = getTechRecommendation(d.total_area_sqft, state.floor, state.techs);
   document.getElementById('resultArea').innerHTML=`
   <div class="result-in bg-white rounded-2xl border-2 border-blue-600 p-4 shadow-md">
     <div class="text-xs text-gray-500 mb-1">${d.service_name} · ${d.total_area_sqft} sqft · ${d.location||'Local'}</div>
-    <div class="text-3xl font-bold text-blue-600 mb-0.5">$${d.grand_total_min.toLocaleString()} – $${d.grand_total_max.toLocaleString()}</div>
-    <div class="flex items-center justify-between mb-3">
-      <div class="text-xs text-gray-400">Estimate (no tax)</div>
-      <div id="marketBadge" class="hidden text-xs bg-green-50 border border-green-200 text-green-700 rounded-full px-2.5 py-0.5"></div>
-    </div>
+    <div class="text-3xl font-bold text-blue-600 mb-0.5">$${midPrice.toLocaleString()}</div>
+    <div class="text-xs text-gray-400 mb-1">📞 Озвучивайте клиенту: $${rangeMin.toLocaleString()} – $${rangeMax.toLocaleString()}</div>
+    <div id="marketBadge" class="hidden text-xs rounded-full px-2.5 py-0.5 mb-2"></div>
+    ${techRec?`<div class="bg-amber-50 border border-amber-300 rounded-xl px-3 py-1.5 text-xs text-amber-800 mb-2">${techRec}</div>`:''}
     <div class="bg-gray-50 rounded-xl p-3 space-y-1.5 text-sm mb-3">
-      <div class="flex justify-between"><span class="text-gray-500">Material</span><span>$${d.breakdown.material_min.toFixed(0)}–$${d.breakdown.material_max.toFixed(0)}</span></div>
-      <div class="flex justify-between"><span class="text-gray-500">Labor</span><span>$${d.breakdown.labor_min.toFixed(0)}–$${d.breakdown.labor_max.toFixed(0)}</span></div>
+      <div class="flex justify-between"><span class="text-gray-500">Material</span><span>$${Math.round((d.breakdown.material_min+d.breakdown.material_max)/2)}</span></div>
+      <div class="flex justify-between"><span class="text-gray-500">Labor</span><span>$${Math.round((d.breakdown.labor_min+d.breakdown.labor_max)/2)}</span></div>
       ${d.breakdown.travel_cost>0?`<div class="flex justify-between"><span class="text-gray-500">Travel</span><span>$${d.breakdown.travel_cost.toFixed(0)}</span></div>`:''}
-      ${d.breakdown.floor_surcharge>0?`<div class="flex justify-between text-orange-600"><span>Floor</span><span>+$${d.breakdown.floor_surcharge}</span></div>`:''}
+      ${d.breakdown.floor_surcharge>0?`<div class="flex justify-between text-orange-600"><span>Floor surcharge</span><span>+$${d.breakdown.floor_surcharge}</span></div>`:''}
       ${d.breakdown.extra_tech_cost>0?`<div class="flex justify-between text-orange-600"><span>Extra tech</span><span>+$${d.breakdown.extra_tech_cost.toFixed(0)}</span></div>`:''}
       ${d.breakdown.urgency_label?`<div class="text-orange-500 text-xs">${d.breakdown.urgency_label}</div>`:''}
-      <div class="border-t pt-1.5 flex justify-between font-semibold"><span>Subtotal</span><span>$${d.total_min.toFixed(0)}–$${d.total_max.toFixed(0)}</span></div>
-
+      <div class="border-t pt-1.5 flex justify-between font-semibold"><span>Total</span><span>$${midPrice.toLocaleString()}</span></div>
     </div>
     ${notes}
     <div class="flex gap-2">
@@ -441,8 +446,7 @@ function showResult(d){
       <button onclick="window.print()" class="flex-1 border border-gray-300 text-gray-700 rounded-xl py-2.5 text-sm">🖨</button>
     </div>
   </div>`;
-  window._r=d; window._rl=d.service_name;
-  // Show market benchmark badge
+  window._r=d; window._rl=d.service_name; window._midPrice=midPrice;
   showMarketBadge(d);
 }
 
@@ -459,6 +463,26 @@ const MARKET = {
   custom_tempered:      {avg:87,  low:41,  high:152, our:87,  label:'Custom Tempered'},
 };
 
+// Technician recommendation based on glass area and weight
+// Glazing industry standards: 1 sqft ~= 3.3 lbs (1/4" tempered)
+function getTechRecommendation(areaSqft, floor, currentTechs) {
+  const estWeightLbs = areaSqft * 3.3; // 1/4" glass ~3.3 lbs/sqft
+  let msg = '';
+  // Heavy glass: >12 sqft (~40 lbs) or 2nd+ floor with >8 sqft
+  if (areaSqft > 20) {
+    msg = '⚠️ Требуется 2 техника — стекло тяжёлое (~' + Math.round(estWeightLbs) + ' lbs)';
+  } else if (areaSqft > 12) {
+    msg = '👥 Рекомендуем 2 техника — стекло крупное (~' + Math.round(estWeightLbs) + ' lbs)';
+  } else if (floor >= 2 && areaSqft > 8) {
+    msg = '👥 Рекомендуем 2 техника — ' + (floor >= 3 ? '3й+ этаж' : '2й этаж') + ' + крупное стекло';
+  }
+  // If already selected 2+ techs, don't nag
+  if (msg && currentTechs >= 2) {
+    msg = '✅ 2 техника выбрано — правильно для этого стекла';
+  }
+  return msg;
+}
+
 function showMarketBadge(d) {
   const badge = document.getElementById('marketBadge');
   if (!badge || !prod) return;
@@ -470,14 +494,21 @@ function showMarketBadge(d) {
   if (area < 1) { badge.classList.add('hidden'); return; }
   const mktMid = area * m.avg;
   const diff = Math.round((ourMid - mktMid) / mktMid * 100);
-  const sign = diff >= 0 ? '+' : '';
-  badge.textContent = `📊 LA market avg: $${Math.round(mktMid)} (${sign}${diff}% vs market)`;
+  // Real assessment: overpriced / fair / underpriced
+  let label, cls;
+  if (diff > 15) {
+    label = '🟡 Цена завышена +' + diff + '% от рынка';
+    cls = 'bg-amber-50 border-amber-200 text-amber-700';
+  } else if (diff < -15) {
+    label = '🔵 Цена занижена ' + diff + '% от рынка';
+    cls = 'bg-blue-50 border-blue-200 text-blue-700';
+  } else {
+    label = '✅ Рыночная цена (' + (diff >= 0 ? '+' : '') + diff + '%)';
+    cls = 'bg-green-50 border-green-200 text-green-700';
+  }
+  badge.textContent = label;
   badge.classList.remove('hidden');
-  badge.className = `text-xs rounded-full px-2.5 py-0.5 border ${
-    Math.abs(diff) <= 20 ? 'bg-green-50 border-green-200 text-green-700' :
-    diff < -20 ? 'bg-blue-50 border-blue-200 text-blue-700' :
-    'bg-amber-50 border-amber-200 text-amber-700'
-  }`;
+  badge.className = `text-xs rounded-full px-2.5 py-0.5 border ${cls}`;
 }
 
 async function loadSim(cat,area){
@@ -508,7 +539,8 @@ function calcOptionsSurcharge(){
 
 function copyRes(){
   const d=window._r;if(!d)return;
-  navigator.clipboard.writeText(`ESTIMATE — ${window._rl}\n${d.total_area_sqft} sqft | ${d.location}\nMaterial: $${d.breakdown.material_min}–$${d.breakdown.material_max}\nLabor: $${d.breakdown.labor_min}–$${d.breakdown.labor_max}\nTOTAL: $${d.total_min}–$${d.total_max}\nWith tax: $${d.grand_total_min}–$${d.grand_total_max}\n\nFast Glass & Windows — 213-566-8886`).then(()=>{event.target.textContent='✅';setTimeout(()=>event.target.textContent='📋 Copy',1500);});
+  const mid=window._midPrice||Math.round((d.grand_total_min+d.grand_total_max)/2);
+  navigator.clipboard.writeText(`ESTIMATE — ${window._rl}\n${d.total_area_sqft} sqft | ${d.location}\n\nPrice: $${mid}\nRange: $${d.grand_total_min}–$${d.grand_total_max}\n\nFast Glass & Windows — 213-566-8886`).then(()=>{event.target.textContent='✅';setTimeout(()=>event.target.textContent='📋 Copy',1500);});
 }
 
 init();
