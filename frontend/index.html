@@ -8,161 +8,241 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-    .pill { transition: all .12s; cursor: pointer; }
-    .pill.on { background:#2563EB; color:#fff; border-color:#2563EB; }
-    .card-sel { transition: all .12s; cursor: pointer; }
-    .card-sel.on { border-color:#2563EB; background:#EFF6FF; }
-    .opt-btn { transition: all .12s; cursor: pointer; }
-    .opt-btn.on { background:#2563EB; color:#fff; border-color:#2563EB; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    }
+    .pill { transition: all .15s ease; cursor: pointer; min-height: 44px; }
+    .pill.on { background:#1d4ed8; color:#fff; border-color:#1d4ed8; box-shadow: 0 1px 3px rgba(29,78,216,.25); }
+    .pill.on .cat-lbl { color:#fff; }
+    .card-sel { transition: all .15s ease; cursor: pointer; }
+    .card-sel.on { border-color:#2563eb; background:#eff6ff; box-shadow: 0 0 0 1px #2563eb; }
+    .opt-btn { transition: all .15s ease; cursor: pointer; min-height: 40px; }
+    .opt-btn.on { background:#1d4ed8; color:#fff; border-color:#1d4ed8; }
     .result-in { animation: ri .25s ease; }
     @keyframes ri { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
     input[type=number]::-webkit-outer-spin-button,
     input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     input[type=number] { -moz-appearance: textfield; }
+    .section-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 12px;
+      box-shadow: 0 1px 2px rgba(15,23,42,.04);
+    }
+    .section-hd {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .step-num {
+      width: 20px; height: 20px;
+      border-radius: 6px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      font-size: 10px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #64748b;
+    }
+    .field-lbl { font-size: 11px; font-weight: 500; color: #64748b; margin-bottom: 4px; }
+    .inp {
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: #fff;
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .inp:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+    .logo-mark {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(29,78,216,.3);
+    }
   </style>
 </head>
-<body class="bg-gray-50 min-h-screen pb-8">
+<body class="min-h-screen pb-10">
 
-<!-- HEADER -->
-<header class="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
-  <div class="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
-    <div>
-      <div class="font-bold text-gray-900 text-base">🪟 Glass Estimate</div>
-      <div class="text-xs text-gray-400">Fast Glass & Windows · LA</div>
+<!-- HEADER + LOGO -->
+<header class="bg-white/95 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-30">
+  <div class="max-w-lg mx-auto px-3 py-2.5 flex items-center justify-between gap-2">
+    <div class="flex items-center gap-2.5 min-w-0">
+      <div class="logo-mark" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <line x1="12" y1="3" x2="12" y2="21"/>
+          <line x1="3" y1="12" x2="21" y2="12"/>
+        </svg>
+      </div>
+      <div class="min-w-0">
+        <h1 class="text-sm font-bold text-slate-900 leading-tight truncate">Glass Estimate</h1>
+        <p class="text-[10px] text-slate-500 leading-tight truncate">Fast Glass &amp; Windows · Los Angeles</p>
+      </div>
     </div>
-    <a href="/admin" class="text-xs text-gray-400 hover:text-blue-600 px-2 py-1">⚙️</a>
+    <a href="/admin" class="flex-shrink-0 text-[10px] font-medium text-slate-400 hover:text-blue-600 border border-slate-200 rounded-lg px-2 py-1.5 transition" aria-label="Admin">Admin</a>
   </div>
 </header>
 
-<div class="max-w-lg mx-auto px-3 pt-3 space-y-3">
+<main class="max-w-lg mx-auto px-3 pt-3 space-y-2.5">
 
-  <!-- 1. CATEGORY — all 4 visible, no overflow -->
-  <div class="bg-white rounded-2xl border border-gray-200 p-3">
-    <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">What?</div>
+  <!-- 1. CATEGORY -->
+  <section class="section-card">
+    <div class="section-hd">
+      <span class="step-num">1</span>
+      <span class="section-title">Category</span>
+    </div>
     <div class="grid grid-cols-4 gap-1.5" id="catGrid"></div>
-  </div>
+  </section>
 
   <!-- 2. PRODUCT TYPE -->
-  <div class="bg-white rounded-2xl border border-gray-200 p-3" id="prodSection" style="display:none">
-    <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Type</div>
-    <div class="grid grid-cols-2 gap-2" id="prodGrid"></div>
-  </div>
+  <section class="section-card" id="prodSection" style="display:none">
+    <div class="section-hd">
+      <span class="step-num">2</span>
+      <span class="section-title">Glass Type</span>
+    </div>
+    <div class="grid grid-cols-2 gap-1.5" id="prodGrid"></div>
+  </section>
 
-  <!-- 3. OPTIONS — dynamic -->
-  <div id="optArea"></div>
+  <!-- 3. OPTIONS (dynamic) -->
+  <div id="optArea" class="space-y-2.5"></div>
 
-  <!-- 4. DIMENSIONS — inches only -->
-  <div class="bg-white rounded-2xl border border-gray-200 p-3" id="dimSection" style="display:none">
-    <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2.5">Dimensions (inches)</div>
-    <div class="grid grid-cols-2 gap-3">
-      <!-- Width -->
+  <!-- 4. DIMENSIONS -->
+  <section class="section-card" id="dimSection" style="display:none">
+    <div class="section-hd">
+      <span class="step-num">3</span>
+      <span class="section-title">Size (inches)</span>
+    </div>
+    <div class="space-y-3">
       <div>
-        <div class="text-xs text-gray-500 mb-1">Width</div>
-        <div class="flex items-center gap-1.5 mb-1.5">
+        <div class="field-lbl">Width</div>
+        <div class="flex items-center gap-1.5">
           <input id="wIn" type="number" min="1" max="300" value="24"
-            class="flex-1 text-center border border-gray-300 rounded-xl py-2.5 text-lg font-bold">
-          <span class="text-xs text-gray-400 flex-shrink-0">in</span>
+            class="inp flex-1 min-w-0 text-center py-2 text-base font-semibold text-slate-800">
+          <span class="text-[10px] text-slate-400 font-medium w-4 flex-shrink-0">in</span>
+          <select id="wFrac" class="inp w-[72px] flex-shrink-0 py-2 px-1 text-[11px] text-slate-700">
+            <option value="0">+0"</option>
+            <option value="1/8">+⅛"</option>
+            <option value="1/4">+¼"</option>
+            <option value="3/8">+⅜"</option>
+            <option value="1/2" selected>+½"</option>
+            <option value="5/8">+⅝"</option>
+            <option value="3/4">+¾"</option>
+            <option value="7/8">+⅞"</option>
+          </select>
         </div>
-        <select id="wFrac" class="w-full border border-gray-300 rounded-xl px-2 py-2.5 text-base font-medium text-gray-800">
-          <option value="0">0"</option>
-          <option value="1/8">+ 1/8"</option>
-          <option value="1/4">+ 1/4"</option>
-          <option value="3/8">+ 3/8"</option>
-          <option value="1/2" selected>+ 1/2"</option>
-          <option value="5/8">+ 5/8"</option>
-          <option value="3/4">+ 3/4"</option>
-          <option value="7/8">+ 7/8"</option>
-        </select>
       </div>
-      <!-- Height -->
       <div>
-        <div class="text-xs text-gray-500 mb-1">Height</div>
-        <div class="flex items-center gap-1.5 mb-1.5">
+        <div class="field-lbl">Height</div>
+        <div class="flex items-center gap-1.5">
           <input id="hIn" type="number" min="1" max="300" value="36"
-            class="flex-1 text-center border border-gray-300 rounded-xl py-2.5 text-lg font-bold">
-          <span class="text-xs text-gray-400 flex-shrink-0">in</span>
+            class="inp flex-1 min-w-0 text-center py-2 text-base font-semibold text-slate-800">
+          <span class="text-[10px] text-slate-400 font-medium w-4 flex-shrink-0">in</span>
+          <select id="hFrac" class="inp w-[72px] flex-shrink-0 py-2 px-1 text-[11px] text-slate-700">
+            <option value="0" selected>+0"</option>
+            <option value="1/8">+⅛"</option>
+            <option value="1/4">+¼"</option>
+            <option value="3/8">+⅜"</option>
+            <option value="1/2">+½"</option>
+            <option value="5/8">+⅝"</option>
+            <option value="3/4">+¾"</option>
+            <option value="7/8">+⅞"</option>
+          </select>
         </div>
-        <select id="hFrac" class="w-full border border-gray-300 rounded-xl px-2 py-2.5 text-base font-medium text-gray-800">
-          <option value="0" selected>0"</option>
-          <option value="1/8">+ 1/8"</option>
-          <option value="1/4">+ 1/4"</option>
-          <option value="3/8">+ 3/8"</option>
-          <option value="1/2">+ 1/2"</option>
-          <option value="5/8">+ 5/8"</option>
-          <option value="3/4">+ 3/4"</option>
-          <option value="7/8">+ ⅞"</option>
-        </select>
       </div>
     </div>
-    <!-- Area preview -->
-    <div class="mt-2.5 bg-blue-50 border border-blue-200 rounded-xl px-3 py-2 text-sm text-blue-700 font-medium" id="areaPreview">Area: —</div>
-    <div id="minChargeNote" class="hidden mt-1.5 bg-amber-50 border border-amber-300 rounded-xl px-3 py-1.5 text-xs text-amber-700">⚠️ Minimum charge applies — small piece</div>
-    <!-- Qty removed — each piece counted separately -->
-  </div>
+    <div class="mt-2.5 bg-blue-50 border border-blue-100 rounded-lg px-2.5 py-2 text-xs text-blue-800 font-medium" id="areaPreview">Area: —</div>
+    <div id="minChargeNote" class="hidden mt-1.5 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 text-[11px] text-amber-800">Minimum charge applies — small piece</div>
+  </section>
 
   <!-- HW QTY -->
-  <div class="bg-white rounded-2xl border border-gray-200 p-3" id="hwQtySection" style="display:none">
-    <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2.5">Quantity</div>
+  <section class="section-card" id="hwQtySection" style="display:none">
+    <div class="section-hd">
+      <span class="step-num">3</span>
+      <span class="section-title">Quantity</span>
+    </div>
     <div class="flex items-center gap-3">
-      <button onclick="hwQty=Math.max(1,hwQty-1);document.getElementById('hwQtyVal').textContent=hwQty;sched()" class="w-10 h-10 rounded-xl border-2 border-gray-200 text-xl font-bold text-gray-600">−</button>
-      <span id="hwQtyVal" class="text-2xl font-bold text-gray-800 w-8 text-center">1</span>
-      <button onclick="hwQty++;document.getElementById('hwQtyVal').textContent=hwQty;sched()" class="w-10 h-10 rounded-xl border-2 border-gray-200 text-xl font-bold text-gray-600">+</button>
-      <span class="text-sm text-gray-400">units</span>
+      <button type="button" onclick="hwQty=Math.max(1,hwQty-1);document.getElementById('hwQtyVal').textContent=hwQty;sched()"
+        class="opt-btn w-10 h-10 rounded-lg border border-slate-200 text-lg font-bold text-slate-600 flex items-center justify-center">−</button>
+      <span id="hwQtyVal" class="text-xl font-bold text-slate-800 w-8 text-center tabular-nums">1</span>
+      <button type="button" onclick="hwQty++;document.getElementById('hwQtyVal').textContent=hwQty;sched()"
+        class="opt-btn w-10 h-10 rounded-lg border border-slate-200 text-lg font-bold text-slate-600 flex items-center justify-center">+</button>
+      <span class="text-xs text-slate-400">units</span>
     </div>
-  </div>
+  </section>
 
-  <!-- 5. LOCATION & JOB -->
-  <div class="bg-white rounded-2xl border border-gray-200 p-3" id="jobSection" style="display:none">
-    <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2.5">Location & Details</div>
-
-    <!-- ZIP -->
-    <div class="flex gap-2 items-center mb-3">
-      <input id="zip" type="text" placeholder="ZIP (e.g. 90210)" maxlength="5"
-        class="flex-1 border border-gray-300 rounded-xl px-3 py-2 text-sm"
-        oninput="onZip(this.value)">
-      <div id="zipBadge" class="text-xs text-gray-500 whitespace-nowrap max-w-32 text-right leading-tight"></div>
+  <!-- 5. JOB DETAILS -->
+  <section class="section-card" id="jobSection" style="display:none">
+    <div class="section-hd">
+      <span class="step-num">4</span>
+      <span class="section-title">Job Details</span>
     </div>
 
-    <!-- Floor -->
-    <div class="mb-2.5">
-      <div class="text-xs text-gray-500 mb-1">Floor</div>
+    <div class="mb-3">
+      <div class="field-lbl">ZIP Code</div>
+      <div class="flex gap-2 items-center flex-wrap">
+        <input id="zip" type="text" placeholder="90210" maxlength="5" inputmode="numeric"
+          class="inp flex-1 min-w-[100px] px-3 py-2 text-sm font-mono tracking-wide"
+          oninput="onZip(this.value)">
+        <div id="zipBadge" class="text-[10px] text-slate-600 leading-tight"></div>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <div class="field-lbl">Floor</div>
       <div class="grid grid-cols-3 gap-1.5">
-        <button onclick="setOpt('floor',1,this)" class="opt-btn on border-2 border-blue-600 bg-blue-600 text-white rounded-xl py-2 text-xs font-semibold">1st</button>
-        <button onclick="setOpt('floor',2,this)" class="opt-btn border-2 border-gray-200 text-gray-700 rounded-xl py-2 text-xs font-medium">2nd<br><span class="text-gray-400" style="font-size:10px">+$200</span></button>
-        <button onclick="setOpt('floor',3,this)" class="opt-btn border-2 border-gray-200 text-gray-700 rounded-xl py-2 text-xs font-medium">3rd+<br><span class="text-gray-400" style="font-size:10px">+$300</span></button>
+        <button type="button" onclick="setOpt('floor',1,this)" class="opt-btn on border border-blue-600 bg-blue-600 text-white rounded-lg py-2 text-xs font-semibold">1st</button>
+        <button type="button" onclick="setOpt('floor',2,this)" class="opt-btn border border-slate-200 text-slate-700 rounded-lg py-1.5 text-xs font-medium leading-tight">2nd<br><span class="text-slate-400 text-[9px]">+$200</span></button>
+        <button type="button" onclick="setOpt('floor',3,this)" class="opt-btn border border-slate-200 text-slate-700 rounded-lg py-1.5 text-xs font-medium leading-tight">3rd+<br><span class="text-slate-400 text-[9px]">+$300</span></button>
       </div>
     </div>
 
-    <!-- Techs -->
-    <div class="mb-2.5">
-      <div class="text-xs text-gray-500 mb-1">Technicians</div>
+    <div class="mb-3">
+      <div class="field-lbl">Technicians</div>
       <div class="flex gap-1.5">
-        <button onclick="setOpt('techs',1,this)" class="opt-btn on border-2 border-blue-600 bg-blue-600 text-white rounded-xl w-12 py-2 text-sm font-bold">1</button>
-        <button onclick="setOpt('techs',2,this)" class="opt-btn border-2 border-gray-200 text-gray-700 rounded-xl w-12 py-2 text-sm font-bold">2</button>
-        <button onclick="setOpt('techs',3,this)" class="opt-btn border-2 border-gray-200 text-gray-700 rounded-xl w-12 py-2 text-sm font-bold">3</button>
+        <button type="button" onclick="setOpt('techs',1,this)" class="opt-btn on border border-blue-600 bg-blue-600 text-white rounded-lg w-11 py-2 text-sm font-bold">1</button>
+        <button type="button" onclick="setOpt('techs',2,this)" class="opt-btn border border-slate-200 text-slate-700 rounded-lg w-11 py-2 text-sm font-bold">2</button>
+        <button type="button" onclick="setOpt('techs',3,this)" class="opt-btn border border-slate-200 text-slate-700 rounded-lg w-11 py-2 text-sm font-bold">3</button>
       </div>
     </div>
 
-    <!-- Urgency -->
-    <div class="mb-2.5">
-      <div class="text-xs text-gray-500 mb-1">Urgency</div>
-      <div class="space-y-1.5">
-        <button onclick="setOpt('urgency','normal',this)" class="opt-btn on w-full text-left border-2 border-blue-600 bg-blue-600 text-white rounded-xl px-3 py-2 text-sm font-medium">Standard <span class="opacity-70 text-xs">(3–5 days)</span></button>
-        <button onclick="setOpt('urgency','urgent',this)" class="opt-btn w-full text-left border-2 border-gray-200 text-gray-700 rounded-xl px-3 py-2 text-sm font-medium">Same-Day <span class="text-orange-500 font-bold">+30%</span></button>
-        <button onclick="setOpt('urgency','emergency',this)" class="opt-btn w-full text-left border-2 border-gray-200 text-gray-700 rounded-xl px-3 py-2 text-sm font-medium">Emergency <span class="text-red-500 font-bold">+50%</span></button>
+    <div class="mb-3">
+      <div class="field-lbl">Urgency</div>
+      <div class="space-y-1">
+        <button type="button" onclick="setOpt('urgency','normal',this)" class="opt-btn on w-full text-left border border-blue-600 bg-blue-600 text-white rounded-lg px-2.5 py-2 text-xs font-medium">Standard <span class="opacity-75">(3–5 days)</span></button>
+        <button type="button" onclick="setOpt('urgency','urgent',this)" class="opt-btn w-full text-left border border-slate-200 text-slate-700 rounded-lg px-2.5 py-2 text-xs font-medium">Same-Day <span class="text-orange-500 font-semibold">+30%</span></button>
+        <button type="button" onclick="setOpt('urgency','emergency',this)" class="opt-btn w-full text-left border border-slate-200 text-slate-700 rounded-lg px-2.5 py-2 text-xs font-medium">Emergency <span class="text-red-500 font-semibold">+50%</span></button>
       </div>
     </div>
 
-    <textarea id="notes" rows="2" placeholder="Notes: outside patio, ladder, Beverly Hills..."
-      class="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm resize-none" oninput="sched()"></textarea>
-  </div>
+    <div>
+      <div class="field-lbl">Notes</div>
+      <textarea id="notes" rows="2" placeholder="Access, ladder, special instructions…"
+        class="inp w-full px-2.5 py-2 text-xs text-slate-800 resize-none placeholder:text-slate-400"
+        oninput="sched()"></textarea>
+    </div>
+  </section>
 
   <!-- RESULT -->
   <div id="resultArea"></div>
   <div id="similarArea"></div>
 
-</div><!-- end main -->
+</main>
 
 <script>
 const API='';
