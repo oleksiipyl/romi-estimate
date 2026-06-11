@@ -16,9 +16,23 @@
     .pill.on { background:#1d4ed8; color:#fff; border-color:#1d4ed8; box-shadow: 0 1px 3px rgba(29,78,216,.25); }
     .pill.on .cat-lbl { color:#fff; }
     .card-sel { transition: all .15s ease; cursor: pointer; }
-    .card-sel.on { border-color:#2563eb; background:#eff6ff; box-shadow: 0 0 0 1px #2563eb; }
-    .opt-btn { transition: all .15s ease; cursor: pointer; min-height: 40px; }
-    .opt-btn.on { background:#1d4ed8; color:#fff; border-color:#1d4ed8; }
+    .card-sel.on { border-color:#93c5fd; background:#f8fafc; box-shadow: 0 0 0 1px #bfdbfe; }
+    .opt-btn {
+      transition: all .15s ease; cursor: pointer; min-height: 40px;
+      border: 1.5px solid #e2e8f0; background: #fff; color: #475569;
+    }
+    .opt-btn.on {
+      border-color: #93c5fd; background: #f0f9ff; color: #1d4ed8;
+      box-shadow: 0 0 0 1px #dbeafe;
+    }
+    .qty-btn {
+      transition: all .15s ease; cursor: pointer;
+      border: 1.5px solid #e2e8f0; background: #fff; color: #475569;
+    }
+    .qty-btn:active { background: #f1f5f9; }
+    .acc-header { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .acc-chevron { transition: transform .2s ease; }
+    .acc-chevron.open { transform: rotate(180deg); }
     .result-in { animation: ri .25s ease; }
     @keyframes ri { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
     input[type=number]::-webkit-outer-spin-button,
@@ -27,15 +41,15 @@
     .section-card {
       background: #fff;
       border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 12px;
+      border-radius: 14px;
+      padding: 16px;
       box-shadow: 0 1px 2px rgba(15,23,42,.04);
     }
     .section-hd {
       display: flex;
       align-items: center;
       gap: 8px;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
     }
     .step-num {
       width: 20px; height: 20px;
@@ -99,7 +113,7 @@
   </div>
 </header>
 
-<main class="max-w-lg mx-auto px-3 pt-3 space-y-2.5">
+<main class="max-w-lg mx-auto px-3 pt-4 space-y-4">
 
   <!-- 1. CATEGORY -->
   <section class="section-card">
@@ -107,7 +121,7 @@
       <span class="step-num">1</span>
       <span class="section-title">Category</span>
     </div>
-    <div class="grid grid-cols-4 gap-1.5" id="catGrid"></div>
+    <div class="grid grid-cols-4 gap-2" id="catGrid"></div>
   </section>
 
   <!-- 2. PRODUCT TYPE -->
@@ -116,11 +130,11 @@
       <span class="step-num">2</span>
       <span class="section-title">Glass Type</span>
     </div>
-    <div class="grid grid-cols-2 gap-1.5" id="prodGrid"></div>
+    <div class="grid grid-cols-2 gap-2" id="prodGrid"></div>
   </section>
 
   <!-- 3. OPTIONS (dynamic) -->
-  <div id="optArea" class="space-y-2.5"></div>
+  <div id="optArea" class="space-y-3"></div>
 
   <!-- 4. DIMENSIONS -->
   <section class="section-card" id="dimSection" style="display:none">
@@ -166,7 +180,7 @@
         </div>
       </div>
     </div>
-    <div class="mt-2.5 bg-blue-50 border border-blue-100 rounded-lg px-2.5 py-2 text-xs text-blue-800 font-medium" id="areaPreview">Area: —</div>
+    <div class="mt-3 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-xs text-slate-600 font-medium" id="areaPreview">Area: —</div>
     <div id="minChargeNote" class="hidden mt-1.5 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 text-[11px] text-amber-800">Minimum charge applies — small piece</div>
   </section>
 
@@ -178,10 +192,10 @@
     </div>
     <div class="flex items-center gap-3">
       <button type="button" onclick="hwQty=Math.max(1,hwQty-1);document.getElementById('hwQtyVal').textContent=hwQty;sched()"
-        class="opt-btn w-10 h-10 rounded-lg border border-slate-200 text-lg font-bold text-slate-600 flex items-center justify-center">−</button>
+        class="qty-btn w-11 h-11 rounded-xl text-lg font-bold flex items-center justify-center">−</button>
       <span id="hwQtyVal" class="text-xl font-bold text-slate-800 w-8 text-center tabular-nums">1</span>
       <button type="button" onclick="hwQty++;document.getElementById('hwQtyVal').textContent=hwQty;sched()"
-        class="opt-btn w-10 h-10 rounded-lg border border-slate-200 text-lg font-bold text-slate-600 flex items-center justify-center">+</button>
+        class="qty-btn w-11 h-11 rounded-xl text-lg font-bold flex items-center justify-center">+</button>
       <span class="text-xs text-slate-400">units</span>
     </div>
   </section>
@@ -193,7 +207,7 @@
       <span class="section-title">Job Details</span>
     </div>
 
-    <div class="mb-3">
+    <div class="mb-4">
       <div class="field-lbl">ZIP Code</div>
       <div class="flex gap-2 items-center flex-wrap">
         <input id="zip" type="text" placeholder="90210" maxlength="5" inputmode="numeric"
@@ -203,30 +217,30 @@
       </div>
     </div>
 
-    <div class="mb-3">
+    <div class="mb-4">
       <div class="field-lbl">Floor</div>
-      <div class="grid grid-cols-3 gap-1.5">
-        <button type="button" onclick="setOpt('floor',1,this)" class="opt-btn on border border-blue-600 bg-blue-600 text-white rounded-lg py-2 text-xs font-semibold">1st</button>
-        <button type="button" onclick="setOpt('floor',2,this)" class="opt-btn border border-slate-200 text-slate-700 rounded-lg py-1.5 text-xs font-medium leading-tight">2nd<br><span class="text-slate-400 text-[9px]">+$200</span></button>
-        <button type="button" onclick="setOpt('floor',3,this)" class="opt-btn border border-slate-200 text-slate-700 rounded-lg py-1.5 text-xs font-medium leading-tight">3rd+<br><span class="text-slate-400 text-[9px]">+$300</span></button>
+      <div class="grid grid-cols-3 gap-2">
+        <button type="button" onclick="setOpt('floor',1,this)" class="opt-btn on rounded-xl py-2.5 text-xs font-semibold">1st</button>
+        <button type="button" onclick="setOpt('floor',2,this)" class="opt-btn rounded-xl py-2 text-xs font-medium leading-tight">2nd<br><span class="text-slate-400 text-[9px]">+$200</span></button>
+        <button type="button" onclick="setOpt('floor',3,this)" class="opt-btn rounded-xl py-2 text-xs font-medium leading-tight">3rd+<br><span class="text-slate-400 text-[9px]">+$300</span></button>
       </div>
     </div>
 
-    <div class="mb-3">
+    <div class="mb-4">
       <div class="field-lbl">Technicians</div>
-      <div class="flex gap-1.5">
-        <button type="button" onclick="setOpt('techs',1,this)" class="opt-btn on border border-blue-600 bg-blue-600 text-white rounded-lg w-11 py-2 text-sm font-bold">1</button>
-        <button type="button" onclick="setOpt('techs',2,this)" class="opt-btn border border-slate-200 text-slate-700 rounded-lg w-11 py-2 text-sm font-bold">2</button>
-        <button type="button" onclick="setOpt('techs',3,this)" class="opt-btn border border-slate-200 text-slate-700 rounded-lg w-11 py-2 text-sm font-bold">3</button>
+      <div class="flex gap-2">
+        <button type="button" onclick="setOpt('techs',1,this)" class="opt-btn on rounded-xl w-12 py-2.5 text-sm font-bold">1</button>
+        <button type="button" onclick="setOpt('techs',2,this)" class="opt-btn rounded-xl w-12 py-2.5 text-sm font-bold">2</button>
+        <button type="button" onclick="setOpt('techs',3,this)" class="opt-btn rounded-xl w-12 py-2.5 text-sm font-bold">3</button>
       </div>
     </div>
 
-    <div class="mb-3">
+    <div class="mb-4">
       <div class="field-lbl">Urgency</div>
-      <div class="space-y-1">
-        <button type="button" onclick="setOpt('urgency','normal',this)" class="opt-btn on w-full text-left border border-blue-600 bg-blue-600 text-white rounded-lg px-2.5 py-2 text-xs font-medium">Standard <span class="opacity-75">(3–5 days)</span></button>
-        <button type="button" onclick="setOpt('urgency','urgent',this)" class="opt-btn w-full text-left border border-slate-200 text-slate-700 rounded-lg px-2.5 py-2 text-xs font-medium">Same-Day <span class="text-orange-500 font-semibold">+30%</span></button>
-        <button type="button" onclick="setOpt('urgency','emergency',this)" class="opt-btn w-full text-left border border-slate-200 text-slate-700 rounded-lg px-2.5 py-2 text-xs font-medium">Emergency <span class="text-red-500 font-semibold">+50%</span></button>
+      <div class="space-y-2">
+        <button type="button" onclick="setOpt('urgency','normal',this)" class="opt-btn on w-full text-left rounded-xl px-3 py-2.5 text-xs font-medium">Standard <span class="text-slate-400">(3–5 days)</span></button>
+        <button type="button" onclick="setOpt('urgency','urgent',this)" class="opt-btn w-full text-left rounded-xl px-3 py-2.5 text-xs font-medium">Same-Day <span class="text-orange-500 font-semibold">+30%</span></button>
+        <button type="button" onclick="setOpt('urgency','emergency',this)" class="opt-btn w-full text-left rounded-xl px-3 py-2.5 text-xs font-medium">Emergency <span class="text-red-500 font-semibold">+50%</span></button>
       </div>
     </div>
 
@@ -265,7 +279,8 @@ const SVC={residential_single:1,residential_igu:2,residential_foggy:13,commercia
 const HCP={residential_single:'single_pane',residential_igu:'double_pane_igu',residential_foggy:'double_pane_igu',commercial_storefront:'commercial_storefront',shower_door:'shower_door',shower_mirror:'mirror',specialty_tabletop:'custom_tempered',specialty_laminated:'laminated'};
 const FRAC={'0':0,'1/8':.125,'1/4':.25,'3/8':.375,'1/2':.5,'5/8':.625,'3/4':.75,'7/8':.875};
 
-let cats=[], prod=null, opts={}, state={floor:1,techs:1,urgency:'normal'}, timer=null, hwQty=1;
+let cats=[], prod=null, opts={}, state={floor:1,techs:1,urgency:'normal'}, timer=null, hwQty=1, expandedOpt=null;
+const ACCORDION_IDS=new Set(['igu_package','heat_treatment','spacer','gas_fill','grids']);
 let cart=[];  // [{label, midPrice, rangeMin, rangeMax, area, qty}]
 
 async function init(){
@@ -300,7 +315,7 @@ function renderCats(){
 function selCat(cat,btn){
   document.querySelectorAll('.pill').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on');
-  prod=null; opts={};
+  prod=null; opts={}; expandedOpt=null;
   document.getElementById('optArea').innerHTML='';
   document.getElementById('dimSection').style.display='none';
   document.getElementById('hwQtySection').style.display='none';
@@ -317,10 +332,10 @@ function renderProds(ps){
   g.innerHTML='';
   ps.forEach(p=>{
     const btn=document.createElement('button');
-    btn.className='card-sel border-2 border-gray-200 rounded-xl p-2.5 text-left';
+    btn.className='card-sel border-2 border-slate-200 rounded-xl p-3 text-left';
     const isHwCard = p.category==='hardware' || p.is_flat_price;
     const priceLabel = isHwCard ? `$${p.price_per_sqft_min}–$${p.price_per_sqft_max}` : `$${p.price_per_sqft_min}–$${p.price_per_sqft_max}<span class="text-gray-400 text-xs font-normal">/sf</span>`;
-    btn.innerHTML=`<div class="font-semibold text-gray-800 text-sm leading-tight">${p.label}</div><div class="text-blue-600 font-bold text-sm mt-1">${priceLabel}</div>`;
+    btn.innerHTML=`<div class="font-semibold text-slate-800 text-sm leading-tight">${p.label}</div><div class="text-slate-500 font-semibold text-sm mt-1.5">${priceLabel}</div>`;
     btn.onclick=()=>selProd(p.id,btn);
     g.appendChild(btn);
   });
@@ -330,7 +345,7 @@ async function selProd(id,btn){
   document.querySelectorAll('.card-sel').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on');
   const d=await fj(`/api/products/${id}`);
-  prod=d; opts={};
+  prod=d; opts={}; expandedOpt=null;
   (d.fields||[]).forEach(f=>{if(f.default)opts[f.id]=f.default;});
   renderOpts();
   // Hardware: no dimensions needed
@@ -343,38 +358,64 @@ async function selProd(id,btn){
 }
 
 // ── OPTIONS ───────────────────────────────────────────
+function optLabel(field){
+  const val=opts[field.id];
+  const opt=(field.options||[]).find(o=>o.value===val);
+  return opt?opt.label:'—';
+}
+
 function renderOpts(){
   const area=document.getElementById('optArea');
   area.innerHTML='';
   if(!prod?.fields) return;
   prod.fields.forEach(field=>{
     if(field.show_if&&opts[field.show_if.field]!==field.show_if.value) return;
+    const isAcc=ACCORDION_IDS.has(field.id);
+    const open=expandedOpt===field.id;
     const sec=document.createElement('div');
-    sec.className='bg-white rounded-2xl border border-gray-200 p-3';
-    sec.innerHTML=`<div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">${field.label}${field.note?`<span class="text-gray-300 font-normal normal-case ml-1">${field.note}</span>`:''}</div><div id="f_${field.id}"></div>`;
-    area.appendChild(sec);
+    sec.className='section-card'+(isAcc?' !py-3':'');
+
+    if(isAcc){
+      sec.innerHTML=`
+        <button type="button" class="acc-header w-full flex items-center gap-3 text-left">
+          <div class="flex-1 min-w-0">
+            <div class="section-title normal-case tracking-normal text-slate-500 mb-0.5">${field.label}</div>
+            <div class="text-sm font-medium text-slate-800 truncate">${optLabel(field)}</div>
+          </div>
+          <svg class="acc-chevron w-4 h-4 text-slate-400 flex-shrink-0${open?' open':''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="acc-body${open?'':' hidden'} pt-3 mt-3 border-t border-slate-100" id="f_${field.id}"></div>`;
+      area.appendChild(sec);
+      sec.querySelector('.acc-header').onclick=()=>{
+        expandedOpt=expandedOpt===field.id?null:field.id;
+        renderOpts();
+      };
+    } else {
+      sec.innerHTML=`<div class="section-hd !mb-3"><span class="section-title normal-case tracking-normal">${field.label}${field.note?`<span class="text-slate-300 font-normal normal-case ml-1">${field.note}</span>`:''}</span></div><div id="f_${field.id}"></div>`;
+      area.appendChild(sec);
+    }
+
     const cont=document.getElementById(`f_${field.id}`);
 
     if(field.type==='radio'){
       if(field.options.length<=6){
-        // Small pill buttons — wrap nicely
         const wrap=document.createElement('div');
-        wrap.className='flex flex-wrap gap-1.5';
+        wrap.className='flex flex-wrap gap-2';
         field.options.forEach(o=>{
           const b=document.createElement('button');
           const on=opts[field.id]===o.value;
           const add=o.price_add_sqft||o.price_add_unit||o.price_add_lf||0;
           const unit=o.price_add_sqft?'/sf':o.price_add_lf?'/lf':o.labor_add?'+labor':'';
-          const badge=add>0?` <span class="text-xs opacity-70">+$${add}${unit}</span>`:add<0?` <span class="text-xs opacity-70">-$${Math.abs(add)}${unit}</span>`:'';
-          b.className=`opt-btn border-2 ${on?'border-blue-600 bg-blue-600 text-white':'border-gray-200 text-gray-700'} rounded-xl px-3 py-1.5 text-sm font-medium`;
+          const badge=add>0?` <span class="text-xs text-slate-400">+$${add}${unit}</span>`:add<0?` <span class="text-xs text-slate-400">-$${Math.abs(add)}${unit}</span>`:'';
+          b.className=`opt-btn rounded-xl px-3 py-2 text-sm font-medium${on?' on':''}`;
           b.innerHTML=o.label+badge;
-          b.onclick=()=>{opts[field.id]=o.value;renderOpts();sched();};
+          b.onclick=()=>{opts[field.id]=o.value;expandedOpt=null;renderOpts();sched();};
           wrap.appendChild(b);
         });
         cont.appendChild(wrap);
       } else {
         const sel=document.createElement('select');
-        sel.className='w-full border border-gray-300 rounded-xl px-3 py-2 text-sm';
+        sel.className='inp w-full px-3 py-2.5 text-sm text-slate-700';
         field.options.forEach(o=>{
           const op=document.createElement('option');
           op.value=o.value; op.selected=opts[field.id]===o.value;
@@ -389,9 +430,9 @@ function renderOpts(){
       if(!Array.isArray(opts[field.id])) opts[field.id]=[];
       field.options.forEach(o=>{
         const lbl=document.createElement('label');
-        lbl.className='flex items-center gap-2 py-1.5 cursor-pointer border-b border-gray-50 last:border-0';
+        lbl.className='flex items-center gap-3 py-2.5 cursor-pointer border-b border-slate-100 last:border-0';
         const chk=opts[field.id].includes(o.value);
-        lbl.innerHTML=`<input type="checkbox" ${chk?'checked':''} class="w-4 h-4 rounded text-blue-600 flex-shrink-0"><span class="text-sm text-gray-800 flex-1">${o.label}</span><span class="text-xs text-gray-400">+$${o.price_add_unit}</span>`;
+        lbl.innerHTML=`<input type="checkbox" ${chk?'checked':''} class="w-4 h-4 rounded border-slate-300 text-blue-600 flex-shrink-0"><span class="text-sm text-slate-700 flex-1">${o.label}</span><span class="text-xs text-slate-400">+$${o.price_add_unit}</span>`;
         lbl.querySelector('input').onchange=e=>{
           if(!Array.isArray(opts[field.id])) opts[field.id]=[];
           if(e.target.checked) opts[field.id].push(o.value);
@@ -445,12 +486,8 @@ function onZip(v){
 // ── CHOICE BUTTONS ────────────────────────────────────
 function setOpt(key,val,btn){
   state[key]=val;
-  btn.closest('div').querySelectorAll('.opt-btn').forEach(b=>{
-    b.classList.remove('on','bg-blue-600','text-white','border-blue-600');
-    b.classList.add('border-gray-200','text-gray-700');
-  });
-  btn.classList.add('on','bg-blue-600','text-white','border-blue-600');
-  btn.classList.remove('border-gray-200','text-gray-700');
+  btn.closest('div').querySelectorAll('.opt-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
   sched();
 }
 
