@@ -5,387 +5,389 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>ROMI Estimate — Glass Price Calculator</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            brand: '#2563EB',
-            'brand-light': '#EFF6FF',
-            'brand-border': '#BFDBFE',
-          }
-        }
-      }
-    }
-  </script>
   <style>
-    /* Mobile-first base */
-    * { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; background: #F9FAFB; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-
-    /* Pill scrollable row — hide scrollbar */
-    .pills-row { display: flex; flex-direction: row; gap: 8px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-    .pills-row::-webkit-scrollbar { display: none; }
-
-    /* Pill button */
-    .pill {
-      display: inline-flex; align-items: center; justify-content: center;
-      height: 36px; padding: 0 14px; border-radius: 999px; cursor: pointer;
-      font-size: 14px; font-weight: 500; white-space: nowrap; border: 1.5px solid transparent;
-      transition: background 0.15s, color 0.15s, border-color 0.15s;
-      background: #F3F4F6; color: #374151; user-select: none;
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0;
+      background: #F3F4F6;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      -webkit-tap-highlight-color: transparent;
     }
-    .pill.selected { background: #2563EB; color: white; border-color: #2563EB; }
-    .pill:hover:not(.selected) { background: #E5E7EB; }
 
-    /* Smaller pill for options */
-    .pill-sm { height: 34px; padding: 0 12px; font-size: 13px; }
+    /* Compact section */
+    .section {
+      background: #fff;
+      border: 1px solid #E5E7EB;
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 8px;
+    }
+    .section-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #9CA3AF;
+      margin-bottom: 8px;
+    }
 
-    /* Product card */
-    .product-card {
-      position: relative; height: 72px; border: 1.5px solid #E5E7EB;
-      border-radius: 12px; background: white; cursor: pointer;
-      display: flex; align-items: center; padding: 0 12px;
-      transition: border-color 0.15s, background 0.15s;
-      overflow: hidden;
+    /* Radio list — vertical */
+    .radio-list { display: flex; flex-direction: column; gap: 4px; }
+    .radio-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 40px;
+      padding: 8px 10px;
+      border: 1px solid #E5E7EB;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: border-color 0.12s, background 0.12s;
+      background: #fff;
     }
-    .product-card.selected { border-color: #2563EB; background: #EFF6FF; }
-    .product-card:hover:not(.selected) { border-color: #93C5FD; }
-    .product-card .radio-dot {
-      position: absolute; top: 8px; right: 8px;
-      width: 16px; height: 16px; border-radius: 50%;
-      border: 2px solid #D1D5DB; background: white;
-      transition: border-color 0.15s, background 0.15s;
+    .radio-item:has(input:checked) {
+      border-color: #2563EB;
+      background: #EFF6FF;
     }
-    .product-card.selected .radio-dot { border-color: #2563EB; background: #2563EB; }
-    .product-card.selected .radio-dot::after {
-      content: ''; display: block; width: 6px; height: 6px;
-      border-radius: 50%; background: white;
-      margin: 3px auto;
+    .radio-item input[type="radio"] {
+      width: 18px; height: 18px; margin: 0; flex-shrink: 0;
+      accent-color: #2563EB;
     }
+    .radio-item .radio-text {
+      flex: 1; font-size: 13px; font-weight: 500; color: #1F2937; line-height: 1.3;
+    }
+    .radio-item .radio-meta {
+      font-size: 11px; color: #6B7280; white-space: nowrap;
+    }
+
+    /* Radio grid — category / product */
+    .radio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .radio-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 52px;
+      padding: 8px 10px 8px 32px;
+      border: 1px solid #E5E7EB;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: border-color 0.12s, background 0.12s;
+      background: #fff;
+    }
+    .radio-card:has(input:checked) {
+      border-color: #2563EB;
+      background: #EFF6FF;
+    }
+    .radio-card input[type="radio"] {
+      position: absolute; left: 10px; top: 50%;
+      transform: translateY(-50%);
+      width: 16px; height: 16px; margin: 0;
+      accent-color: #2563EB;
+    }
+    .radio-card .card-title {
+      font-size: 12px; font-weight: 600; color: #111827; line-height: 1.2;
+    }
+    .radio-card .card-sub {
+      font-size: 10px; color: #9CA3AF; margin-top: 2px; line-height: 1.2;
+    }
+
+    /* Inline chip radios — floor, tech */
+    .chip-row { display: flex; gap: 6px; }
+    .chip-radio {
+      flex: 1;
+      position: relative;
+      min-height: 40px;
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid #E5E7EB;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 12px; font-weight: 600; color: #374151;
+      transition: border-color 0.12s, background 0.12s;
+      background: #fff;
+    }
+    .chip-radio:has(input:checked) {
+      border-color: #2563EB;
+      background: #EFF6FF;
+      color: #1D4ED8;
+    }
+    .chip-radio input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .chip-radio .chip-sub { display: block; font-size: 9px; font-weight: 500; color: #9CA3AF; margin-top: 1px; }
+    .chip-radio:has(input:checked) .chip-sub { color: #60A5FA; }
 
     /* Dimension inputs */
+    .dim-row { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
     .dim-input {
-      width: 52px; text-align: center; border: 1.5px solid #D1D5DB;
-      border-radius: 8px; padding: 6px 4px; font-size: 14px;
-      background: white; outline: none; transition: border-color 0.15s;
+      width: 44px; height: 36px; text-align: center;
+      border: 1px solid #D1D5DB; border-radius: 6px;
+      font-size: 14px; font-weight: 500; background: #fff;
+      outline: none;
     }
-    .dim-input:focus { border-color: #2563EB; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
-
-    /* Select dropdown */
+    .dim-input:focus { border-color: #2563EB; box-shadow: 0 0 0 2px rgba(37,99,235,0.15); }
     .dim-select {
-      border: 1.5px solid #D1D5DB; border-radius: 8px;
-      padding: 6px 8px; font-size: 13px; background: white;
-      outline: none; cursor: pointer; transition: border-color 0.15s;
+      flex: 1; min-width: 80px; height: 36px;
+      border: 1px solid #D1D5DB; border-radius: 6px;
+      font-size: 12px; padding: 0 8px; background: #fff;
     }
-    .dim-select:focus { border-color: #2563EB; }
-    .full-select {
-      width: 100%; height: 44px; border: 1.5px solid #D1D5DB;
-      border-radius: 8px; padding: 0 12px; font-size: 14px;
-      background: white; outline: none; cursor: pointer;
-      transition: border-color 0.15s;
-    }
-    .full-select:focus { border-color: #2563EB; }
+    .dim-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #9CA3AF; margin-bottom: 6px; }
 
-    /* Floor/tech/urgency buttons */
-    .seg-btn {
-      flex: 1; height: 44px; border: 1.5px solid #E5E7EB;
-      background: white; border-radius: 8px; cursor: pointer;
-      font-size: 13px; color: #374151; font-weight: 500;
-      transition: all 0.15s; text-align: center; display: flex;
-      align-items: center; justify-content: center;
-    }
-    .seg-btn.selected { border-color: #2563EB; background: #EFF6FF; color: #2563EB; }
-    .seg-btn:hover:not(.selected) { border-color: #93C5FD; background: #F8FAFF; }
-
-    /* Square tech btn */
-    .sq-btn {
-      width: 44px; height: 44px; border: 1.5px solid #E5E7EB;
-      background: white; border-radius: 8px; cursor: pointer;
-      font-size: 15px; font-weight: 600; color: #374151;
-      transition: all 0.15s; display: flex; align-items: center; justify-content: center;
-    }
-    .sq-btn.selected { border-color: #2563EB; background: #EFF6FF; color: #2563EB; }
-    .sq-btn:hover:not(.selected) { border-color: #93C5FD; }
-
-    /* Urgency stacked */
-    .urgency-btn {
-      width: 100%; height: 44px; border: 1.5px solid #E5E7EB;
-      background: white; border-radius: 8px; cursor: pointer;
-      font-size: 13px; font-weight: 500; color: #374151;
-      transition: all 0.15s; text-align: center; display: flex;
-      align-items: center; justify-content: center;
-    }
-    .urgency-btn.selected { border-color: #2563EB; background: #EFF6FF; color: #2563EB; }
-    .urgency-btn:hover:not(.selected) { border-color: #93C5FD; background: #F8FAFF; }
-
-    /* Section card */
-    .section-card {
-      background: white; border-radius: 16px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04);
-      padding: 16px; margin-bottom: 12px;
-    }
-    .section-label {
-      font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
-      text-transform: uppercase; color: #6B7280; margin-bottom: 12px;
+    .area-bar {
+      margin-top: 8px; padding: 8px 10px;
+      background: #F0F9FF; border: 1px solid #BAE6FD;
+      border-radius: 8px; font-size: 12px; font-weight: 500; color: #0369A1;
     }
 
-    /* Area preview */
-    .area-preview {
-      background: #F0F9FF; border: 1.5px solid #BAE6FD;
-      height: 44px; border-radius: 8px; padding: 0 12px;
-      display: flex; align-items: center; font-size: 13px;
-      color: #0369A1; font-weight: 500;
+    /* Qty stepper */
+    .qty-stepper { display: flex; align-items: center; gap: 8px; }
+    .qty-btn {
+      width: 32px; height: 32px; border: 1px solid #D1D5DB;
+      border-radius: 6px; background: #fff; font-size: 16px; font-weight: 600;
+      color: #374151; cursor: pointer;
     }
+    .qty-val { font-size: 14px; font-weight: 700; min-width: 20px; text-align: center; }
 
-    /* Result section */
-    .result-section {
-      background: white; border-radius: 16px;
-      box-shadow: 0 2px 8px rgba(37,99,235,0.12), 0 0 0 1px rgba(37,99,235,0.08);
-      padding: 20px; margin-bottom: 12px;
+    /* Result */
+    .result-box {
+      border: 2px solid #2563EB;
+      border-radius: 12px;
+      padding: 14px;
+      background: #fff;
+      margin-bottom: 8px;
     }
+    .breakdown-line {
+      display: flex; justify-content: space-between;
+      padding: 4px 0; font-size: 12px;
+      border-bottom: 1px solid #F3F4F6;
+    }
+    .breakdown-line:last-child { border-bottom: none; }
 
-    /* Breakdown row */
-    .breakdown-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; border-bottom: 1px solid #E5E7EB; }
-    .breakdown-row:last-child { border-bottom: none; font-weight: 700; font-size: 14px; }
+    /* Sticky mobile price bar */
+    .price-bar {
+      display: none;
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 40;
+      background: #fff; border-top: 1px solid #E5E7EB;
+      padding: 10px 16px;
+      box-shadow: 0 -4px 12px rgba(0,0,0,0.06);
+    }
+    .price-bar.visible { display: block; }
+    @media (min-width: 640px) { .price-bar { display: none !important; } }
 
-    /* Spinner */
     .spinner {
-      display: inline-block; width: 18px; height: 18px;
+      width: 16px; height: 16px;
       border: 2px solid #E5E7EB; border-top-color: #2563EB;
       border-radius: 50%; animation: spin 0.6s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+    .fade-in { animation: fadeIn 0.2s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
-    /* Fade-in */
-    .fade-in { animation: fadeIn 0.25s ease; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-
-    /* ZIP badge */
-    .zip-badge {
-      display: inline-flex; align-items: center; gap: 4px;
-      background: #ECFDF5; border: 1px solid #6EE7B7;
-      border-radius: 999px; padding: 2px 10px;
-      font-size: 12px; color: #065F46; font-weight: 500;
+    body.has-price-bar { padding-bottom: 64px; }
+    textarea { resize: none; width: 100%; border: 1px solid #D1D5DB; border-radius: 8px; padding: 8px 10px; font-size: 13px; }
+    textarea:focus { outline: none; border-color: #2563EB; }
+    .zip-input {
+      width: 88px; height: 36px; border: 1px solid #D1D5DB;
+      border-radius: 6px; padding: 0 10px; font-size: 14px;
+      font-family: ui-monospace, monospace; letter-spacing: 0.05em;
     }
+    .zip-badge {
+      font-size: 11px; color: #047857; background: #ECFDF5;
+      border: 1px solid #A7F3D0; border-radius: 999px; padding: 2px 8px;
+    }
+    .field-group { margin-bottom: 10px; }
+    .field-group:last-child { margin-bottom: 0; }
+    .field-label { font-size: 11px; font-weight: 600; color: #4B5563; margin-bottom: 6px; }
+    .field-note { font-size: 10px; color: #9CA3AF; margin-bottom: 6px; }
+    .opt-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+    .opt-tag { font-size: 10px; background: #F3F4F6; color: #6B7280; padding: 2px 8px; border-radius: 999px; }
 
-    /* Scrollbar for textarea */
-    textarea { resize: none; }
+    @media print {
+      .price-bar, header .status { display: none !important; }
+      body { padding-bottom: 0 !important; background: #fff; }
+    }
   </style>
 </head>
 <body>
 
-<!-- STICKY HEADER -->
-<header class="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
-  <div class="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
-    <div class="flex items-center gap-2">
-      <span class="text-xl">🪟</span>
-      <div>
-        <div class="font-bold text-gray-900 text-sm leading-tight">ROMI Estimate</div>
-        <div class="text-xs text-gray-400 leading-tight">Glass Price Calculator</div>
-      </div>
+<header class="sticky top-0 z-30 bg-white border-b border-gray-200">
+  <div class="max-w-lg mx-auto px-3 py-2 flex items-center justify-between">
+    <div>
+      <div class="text-sm font-bold text-gray-900 leading-tight">ROMI Estimate</div>
+      <div class="text-[10px] text-gray-400">Glass Price Calculator</div>
     </div>
-    <div id="calc-status" class="text-xs text-gray-400">Ready</div>
+    <div id="calc-status" class="status text-[10px] text-gray-400 font-medium">Ready</div>
   </div>
 </header>
 
-<!-- MAIN CONTENT -->
-<main class="max-w-lg mx-auto px-4 py-4 pb-12">
+<main class="max-w-lg mx-auto px-3 py-3">
 
-  <!-- STEP 1: CATEGORY -->
-  <div class="section-card">
-    <div class="section-label">What needs to be done?</div>
-    <div class="pills-row" id="category-pills">
-      <button class="pill selected" data-cat="residential">🏠 Residential</button>
-      <button class="pill" data-cat="commercial">🏢 Commercial</button>
-      <button class="pill" data-cat="shower">🚿 Shower &amp; Bath</button>
-      <button class="pill" data-cat="specialty">✨ Specialty</button>
-    </div>
-  </div>
+  <!-- CATEGORY -->
+  <section class="section">
+    <div class="section-title">1 · Category</div>
+    <div class="radio-grid" id="category-grid" role="radiogroup" aria-label="Category"></div>
+  </section>
 
-  <!-- STEP 2: PRODUCT -->
-  <div class="section-card">
-    <div class="section-label">Select Type</div>
-    <div id="product-grid" class="grid grid-cols-2 gap-[10px]">
-      <!-- Populated by JS -->
-    </div>
-    <div id="product-loading" class="flex justify-center py-4">
-      <div class="spinner"></div>
-    </div>
-  </div>
+  <!-- PRODUCT -->
+  <section class="section">
+    <div class="section-title">2 · Type</div>
+    <div class="radio-grid" id="product-grid" role="radiogroup" aria-label="Product type"></div>
+    <div id="product-loading" class="flex justify-center py-3"><div class="spinner"></div></div>
+  </section>
 
-  <!-- STEP 3: OPTIONS (hidden until product selected) -->
-  <div class="section-card fade-in" id="options-section" style="display:none">
-    <div class="section-label">Options</div>
-    <div id="options-fields">
-      <!-- Populated by JS -->
-    </div>
-  </div>
+  <!-- OPTIONS -->
+  <section class="section" id="options-section" style="display:none">
+    <div class="section-title">3 · Options</div>
+    <div id="options-fields"></div>
+  </section>
 
-  <!-- STEP 4: DIMENSIONS -->
-  <div class="section-card">
-    <div class="section-label">Dimensions</div>
-    <div class="grid grid-cols-2 gap-4">
-      <!-- WIDTH -->
+  <!-- DIMENSIONS -->
+  <section class="section">
+    <div class="section-title">4 · Size</div>
+    <div class="grid grid-cols-2 gap-3">
       <div>
-        <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">Width</div>
-        <div class="flex items-center gap-1 mb-2">
-          <input class="dim-input" type="number" id="width-ft" placeholder="ft" min="0" max="99" value="2" />
-          <span class="text-gray-400 text-sm">ft</span>
-          <input class="dim-input" type="number" id="width-in" placeholder="in" min="0" max="11" value="0" />
-          <span class="text-gray-400 text-sm">in</span>
+        <div class="dim-label">Width</div>
+        <div class="dim-row mb-1">
+          <input class="dim-input" type="number" id="width-ft" min="0" max="99" value="2" aria-label="Width feet" />
+          <span class="text-[10px] text-gray-400">ft</span>
+          <input class="dim-input" type="number" id="width-in" min="0" max="11" value="0" aria-label="Width inches" />
+          <span class="text-[10px] text-gray-400">in</span>
         </div>
-        <select class="dim-select w-full" id="width-frac">
+        <select class="dim-select w-full" id="width-frac" aria-label="Width fraction">
           <option value="0">+ 0″</option>
-          <option value="1/8">+ 1/8″</option>
-          <option value="1/4">+ 1/4″</option>
-          <option value="3/8">+ 3/8″</option>
-          <option value="1/2">+ 1/2″</option>
-          <option value="5/8">+ 5/8″</option>
-          <option value="3/4">+ 3/4″</option>
-          <option value="7/8">+ 7/8″</option>
+          <option value="1/8">+ ⅛″</option>
+          <option value="1/4">+ ¼″</option>
+          <option value="3/8">+ ⅜″</option>
+          <option value="1/2">+ ½″</option>
+          <option value="5/8">+ ⅝″</option>
+          <option value="3/4">+ ¾″</option>
+          <option value="7/8">+ ⅞″</option>
         </select>
       </div>
-      <!-- HEIGHT -->
       <div>
-        <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">Height</div>
-        <div class="flex items-center gap-1 mb-2">
-          <input class="dim-input" type="number" id="height-ft" placeholder="ft" min="0" max="99" value="3" />
-          <span class="text-gray-400 text-sm">ft</span>
-          <input class="dim-input" type="number" id="height-in" placeholder="in" min="0" max="11" value="0" />
-          <span class="text-gray-400 text-sm">in</span>
+        <div class="dim-label">Height</div>
+        <div class="dim-row mb-1">
+          <input class="dim-input" type="number" id="height-ft" min="0" max="99" value="3" aria-label="Height feet" />
+          <span class="text-[10px] text-gray-400">ft</span>
+          <input class="dim-input" type="number" id="height-in" min="0" max="11" value="0" aria-label="Height inches" />
+          <span class="text-[10px] text-gray-400">in</span>
         </div>
-        <select class="dim-select w-full" id="height-frac">
+        <select class="dim-select w-full" id="height-frac" aria-label="Height fraction">
           <option value="0">+ 0″</option>
-          <option value="1/8">+ 1/8″</option>
-          <option value="1/4">+ 1/4″</option>
-          <option value="3/8">+ 3/8″</option>
-          <option value="1/2">+ 1/2″</option>
-          <option value="5/8">+ 5/8″</option>
-          <option value="3/4">+ 3/4″</option>
-          <option value="7/8">+ 7/8″</option>
+          <option value="1/8">+ ⅛″</option>
+          <option value="1/4">+ ¼″</option>
+          <option value="3/8">+ ⅜″</option>
+          <option value="1/2">+ ½″</option>
+          <option value="5/8">+ ⅝″</option>
+          <option value="3/4">+ ¾″</option>
+          <option value="7/8">+ ⅞″</option>
         </select>
       </div>
     </div>
-
-    <!-- LIVE AREA PREVIEW -->
-    <div class="area-preview mt-4" id="area-preview">
-      📐 Area: — sq ft
-    </div>
-
-    <!-- QUANTITY -->
-    <div class="flex items-center gap-3 mt-3">
-      <span class="text-sm text-gray-600 font-medium">Qty:</span>
-      <div class="flex items-center gap-2">
-        <button class="w-8 h-8 rounded-lg border border-gray-200 bg-white text-gray-600 font-bold flex items-center justify-center hover:bg-gray-50 transition" id="qty-minus">−</button>
-        <span class="text-sm font-semibold text-gray-800 w-6 text-center" id="qty-display">1</span>
-        <button class="w-8 h-8 rounded-lg border border-gray-200 bg-white text-gray-600 font-bold flex items-center justify-center hover:bg-gray-50 transition" id="qty-plus">+</button>
+    <div class="area-bar" id="area-preview">Area: — sq ft</div>
+    <div class="flex items-center justify-between mt-2">
+      <span class="text-xs text-gray-500 font-medium">Quantity</span>
+      <div class="qty-stepper">
+        <button type="button" class="qty-btn" id="qty-minus" aria-label="Decrease quantity">−</button>
+        <span class="qty-val" id="qty-display">1</span>
+        <button type="button" class="qty-btn" id="qty-plus" aria-label="Increase quantity">+</button>
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- STEP 5: LOCATION & JOB -->
-  <div class="section-card">
-    <div class="section-label">Location &amp; Job Details</div>
+  <!-- JOB DETAILS -->
+  <section class="section">
+    <div class="section-title">5 · Job</div>
 
-    <!-- ZIP -->
-    <div class="mb-4">
-      <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">ZIP Code</div>
-      <div class="flex items-center gap-2">
-        <input
-          type="text" id="zip-input" maxlength="5"
-          placeholder="90210"
-          class="dim-select text-base font-mono w-24"
-          style="height:44px; font-size:15px; letter-spacing:0.05em;"
-        />
-        <div id="zip-badge" class="zip-badge" style="display:none"></div>
-        <div id="zip-loading" style="display:none"><div class="spinner" style="width:14px;height:14px;"></div></div>
+    <div class="field-group">
+      <div class="field-label">ZIP Code</div>
+      <div class="flex items-center gap-2 flex-wrap">
+        <input type="text" id="zip-input" class="zip-input" maxlength="5" placeholder="91324" inputmode="numeric" />
+        <span id="zip-badge" class="zip-badge" style="display:none"></span>
+        <span id="zip-loading" style="display:none"><span class="spinner"></span></span>
       </div>
     </div>
 
-    <!-- FLOOR -->
-    <div class="mb-4">
-      <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">Floor</div>
-      <div class="flex gap-2" id="floor-btns">
-        <button class="seg-btn selected" data-floor="1">1st</button>
-        <button class="seg-btn" data-floor="2">2nd<br/><span class="text-[10px] font-normal">+$150</span></button>
-        <button class="seg-btn" data-floor="3">3rd+<br/><span class="text-[10px] font-normal">+$300</span></button>
+    <div class="field-group">
+      <div class="field-label">Floor</div>
+      <div class="chip-row" id="floor-radios" role="radiogroup" aria-label="Floor">
+        <label class="chip-radio"><input type="radio" name="floor" value="1" checked />1st</label>
+        <label class="chip-radio"><input type="radio" name="floor" value="2" />2nd<span class="chip-sub">+$150</span></label>
+        <label class="chip-radio"><input type="radio" name="floor" value="3" />3rd+<span class="chip-sub">+$300</span></label>
       </div>
     </div>
 
-    <!-- TECHNICIANS -->
-    <div class="mb-4">
-      <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">Technicians</div>
-      <div class="flex gap-2" id="tech-btns">
-        <button class="sq-btn selected" data-tech="1">1</button>
-        <button class="sq-btn" data-tech="2">2</button>
-        <button class="sq-btn" data-tech="3">3</button>
+    <div class="field-group">
+      <div class="field-label">Technicians</div>
+      <div class="chip-row" id="tech-radios" role="radiogroup" aria-label="Technicians">
+        <label class="chip-radio" style="flex:0;width:48px"><input type="radio" name="techs" value="1" checked />1</label>
+        <label class="chip-radio" style="flex:0;width:48px"><input type="radio" name="techs" value="2" />2</label>
+        <label class="chip-radio" style="flex:0;width:48px"><input type="radio" name="techs" value="3" />3</label>
       </div>
     </div>
 
-    <!-- URGENCY -->
-    <div class="mb-4">
-      <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">Urgency</div>
-      <div class="flex flex-col gap-2" id="urgency-btns">
-        <button class="urgency-btn selected" data-urgency="standard">Standard</button>
-        <button class="urgency-btn" data-urgency="same_day">Same-Day &nbsp;<span class="text-[11px] font-normal text-gray-400">+30%</span></button>
-        <button class="urgency-btn" data-urgency="emergency">Emergency &nbsp;<span class="text-[11px] font-normal text-gray-400">+50%</span></button>
+    <div class="field-group">
+      <div class="field-label">Urgency</div>
+      <div class="radio-list" id="urgency-radios" role="radiogroup" aria-label="Urgency">
+        <label class="radio-item">
+          <input type="radio" name="urgency" value="normal" checked />
+          <span class="radio-text">Standard (3–5 days)</span>
+        </label>
+        <label class="radio-item">
+          <input type="radio" name="urgency" value="urgent" />
+          <span class="radio-text">Same-Day</span>
+          <span class="radio-meta text-orange-500 font-semibold">+30%</span>
+        </label>
+        <label class="radio-item">
+          <input type="radio" name="urgency" value="emergency" />
+          <span class="radio-text">Emergency / After Hours</span>
+          <span class="radio-meta text-red-500 font-semibold">+50%</span>
+        </label>
       </div>
     </div>
 
-    <!-- NOTES -->
-    <div>
-      <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">Notes</div>
-      <textarea
-        id="notes-input" rows="2"
-        placeholder="Any special instructions, access details, etc."
-        class="w-full border border-gray-200 rounded-xl p-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition"
-      ></textarea>
+    <div class="field-group">
+      <div class="field-label">Notes</div>
+      <textarea id="notes-input" rows="2" placeholder="Access, ladder, special instructions…"></textarea>
     </div>
-  </div>
+  </section>
 
-  <!-- RESULT SECTION (hidden until calc) -->
-  <div id="result-section" class="result-section fade-in" style="display:none">
-    <div class="flex items-start justify-between mb-1">
+  <!-- RESULT -->
+  <section class="result-box fade-in" id="result-section" style="display:none">
+    <div id="result-tags" class="opt-tags"></div>
+    <div class="flex items-start justify-between gap-2">
       <div>
-        <div id="result-price" class="text-[32px] font-bold text-blue-600 leading-tight"></div>
-        <div id="result-tax-note" class="text-xs text-gray-400 mt-0.5">includes LA tax 10.25%</div>
+        <div id="result-price" class="text-2xl font-bold text-blue-600 leading-tight"></div>
+        <div class="text-[10px] text-gray-400 mt-0.5" id="result-meta"></div>
       </div>
       <div id="result-spinner" style="display:none"><div class="spinner"></div></div>
     </div>
-
-    <!-- BREAKDOWN TABLE -->
-    <div class="bg-gray-50 rounded-xl p-3 mt-4" id="breakdown-table">
-      <!-- Populated by JS -->
+    <div class="bg-gray-50 rounded-lg p-2 mt-3" id="breakdown-table"></div>
+    <div id="result-notes" class="mt-2 text-[11px] text-orange-700"></div>
+    <div class="flex gap-2 mt-3">
+      <button type="button" id="copy-btn" class="flex-1 h-10 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700">Copy</button>
+      <button type="button" id="print-btn" class="flex-1 h-10 border border-blue-600 text-blue-600 rounded-lg text-sm font-semibold hover:bg-blue-50">Print</button>
     </div>
+  </section>
 
-    <!-- ACTIONS -->
-    <div class="flex gap-3 mt-4">
-      <button id="copy-btn" class="flex-1 h-11 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 active:bg-blue-800 transition flex items-center justify-center gap-2">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-        Copy
-      </button>
-      <button id="print-btn" class="flex-1 h-11 border-2 border-blue-600 text-blue-600 rounded-xl font-semibold text-sm hover:bg-blue-50 active:bg-blue-100 transition flex items-center justify-center gap-2">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-        Print
-      </button>
-    </div>
-  </div>
-
-  <!-- SIMILAR JOBS (hidden until calc) -->
-  <div id="similar-section" style="display:none"
-    class="fade-in rounded-xl p-3 mb-4 border border-amber-300"
-    style="background:#FFFBEB; border-color:#FCD34D;">
-    <div class="font-semibold text-sm text-amber-800 mb-2">📋 Similar past jobs</div>
-    <div id="similar-table" class="text-xs text-amber-900">
-      <!-- Populated by JS -->
-    </div>
-  </div>
+  <!-- SIMILAR JOBS -->
+  <section id="similar-section" style="display:none" class="section border-amber-200 bg-amber-50">
+    <div class="text-xs font-semibold text-amber-800 mb-2">Similar past jobs</div>
+    <div id="similar-table" class="text-xs text-amber-900"></div>
+  </section>
 
 </main>
 
+<!-- Sticky mobile price -->
+<div class="price-bar" id="price-bar">
+  <div class="max-w-lg mx-auto flex items-center justify-between">
+    <div>
+      <div class="text-[10px] text-gray-400 uppercase font-semibold">Estimate</div>
+      <div id="bar-price" class="text-lg font-bold text-blue-600 leading-tight">—</div>
+    </div>
+    <button type="button" id="bar-scroll" class="text-xs font-semibold text-blue-600 px-3 py-2 bg-blue-50 rounded-lg">Details</button>
+  </div>
+</div>
+
 <script>
-// ─── CONSTANTS ───────────────────────────────────────────────────────────────
 const SVC = {
   residential_single: 1, residential_igu: 2, residential_foggy: 13,
   commercial_storefront: 17, commercial_partition: 19, commercial_door: 23,
@@ -395,10 +397,18 @@ const SVC = {
 const HCP = {
   residential_single: 'single_pane', residential_igu: 'double_pane_igu',
   residential_foggy: 'double_pane_igu', commercial_storefront: 'commercial_storefront',
+  commercial_partition: 'commercial_partition', commercial_door: 'commercial_door',
   shower_door: 'shower_door', shower_mirror: 'mirror',
-  specialty_tabletop: 'custom_tempered', specialty_laminated: 'laminated'
+  specialty_tabletop: 'custom_tempered', specialty_custom: 'custom_tempered', specialty_laminated: 'laminated'
 };
 const FRAC = { '0': 0, '1/8': .125, '1/4': .25, '3/8': .375, '1/2': .5, '5/8': .625, '3/4': .75, '7/8': .875 };
+
+const CATEGORIES = [
+  { id: 'residential', label: 'Residential', sub: 'Windows & doors' },
+  { id: 'commercial', label: 'Commercial', sub: 'Storefront & office' },
+  { id: 'shower', label: 'Shower & Bath', sub: 'Doors & mirrors' },
+  { id: 'specialty', label: 'Specialty', sub: 'Custom glass' }
+];
 
 const CAT_MAP = {
   residential: ['residential_single', 'residential_igu', 'residential_foggy'],
@@ -408,26 +418,25 @@ const CAT_MAP = {
 };
 
 const PRODUCT_LABELS = {
-  residential_single: { label: 'Single Pane', desc: 'Standard single pane window' },
-  residential_igu: { label: 'Double Pane IGU', desc: 'Insulated glass unit' },
-  residential_foggy: { label: 'Foggy / Seal Failure', desc: 'IGU fog replacement' },
-  commercial_storefront: { label: 'Storefront Glass', desc: 'Commercial facade glass' },
-  commercial_partition: { label: 'Glass Partition', desc: 'Office partition' },
-  commercial_door: { label: 'Glass Door', desc: 'Entry or interior door' },
-  shower_door: { label: 'Shower Door', desc: 'Frameless / framed door' },
-  shower_mirror: { label: 'Mirror', desc: 'Bathroom or vanity mirror' },
-  specialty_tabletop: { label: 'Table Top', desc: 'Custom tempered tabletop' },
-  specialty_custom: { label: 'Custom Cut', desc: 'Any custom shape' },
-  specialty_laminated: { label: 'Laminated Glass', desc: 'Safety / hurricane' }
+  residential_single: { label: 'Single Pane', sub: 'Broken window' },
+  residential_igu: { label: 'Double Pane IGU', sub: 'Insulated unit' },
+  residential_foggy: { label: 'Foggy IGU', sub: 'Seal failure' },
+  commercial_storefront: { label: 'Storefront', sub: 'Facade glass' },
+  commercial_partition: { label: 'Partition', sub: 'Office glass' },
+  commercial_door: { label: 'Glass Door', sub: 'Entry / interior' },
+  shower_door: { label: 'Shower Door', sub: 'Frameless / framed' },
+  shower_mirror: { label: 'Mirror', sub: 'Vanity / bath' },
+  specialty_tabletop: { label: 'Table Top', sub: 'Tempered top' },
+  specialty_custom: { label: 'Custom Cut', sub: 'Any shape' },
+  specialty_laminated: { label: 'Laminated', sub: 'Safety glass' }
 };
 
-// ─── STATE ───────────────────────────────────────────────────────────────────
 const state = {
   category: 'residential',
   productKey: null,
   serviceId: null,
-  optionFields: [],
-  selectedModifiers: [],
+  productFields: [],
+  productOptions: {},
   widthFt: 2, widthIn: 0, widthFrac: '0',
   heightFt: 3, heightIn: 0, heightFrac: '0',
   quantity: 1,
@@ -435,14 +444,14 @@ const state = {
   zipData: null,
   floor: 1,
   numTechs: 1,
-  urgency: 'standard',
+  urgency: 'normal',
   notes: '',
   calcResult: null,
   calcTimer: null,
-  zipTimer: null
+  zipTimer: null,
+  apiProducts: null
 };
 
-// ─── HELPERS ─────────────────────────────────────────────────────────────────
 function fmt(n) { return n != null ? '$' + Math.round(n).toLocaleString() : '—'; }
 function fmtRange(min, max) {
   if (min == null || max == null) return '—';
@@ -451,222 +460,201 @@ function fmtRange(min, max) {
 function calcAreaSqft() {
   const wIn = (state.widthFt * 12) + state.widthIn + (FRAC[state.widthFrac] || 0);
   const hIn = (state.heightFt * 12) + state.heightIn + (FRAC[state.heightFrac] || 0);
-  return (wIn / 12) * (hIn / 12);
+  return (wIn / 12) * (hIn / 12) * state.quantity;
 }
 function dimLabel() {
   const wIn = (state.widthFt * 12) + state.widthIn + (FRAC[state.widthFrac] || 0);
   const hIn = (state.heightFt * 12) + state.heightIn + (FRAC[state.heightFrac] || 0);
   return Math.round(wIn) + '″ × ' + Math.round(hIn) + '″';
 }
+function setStatus(txt) { document.getElementById('calc-status').textContent = txt; }
 
-// ─── AREA PREVIEW ────────────────────────────────────────────────────────────
-function updateAreaPreview() {
-  const area = calcAreaSqft();
-  const el = document.getElementById('area-preview');
-  if (area > 0) {
-    el.textContent = '📐 Area: ' + area.toFixed(2) + ' sq ft — ' + dimLabel();
-  } else {
-    el.textContent = '📐 Area: — sq ft';
+function priceBadge(opt) {
+  const add = opt.price_add_sqft || opt.price_add_unit || opt.price_add_lf || opt.labor_add || 0;
+  if (add > 0) {
+    const unit = opt.price_add_sqft ? '/sf' : opt.price_add_lf ? '/lf' : '';
+    return `+$${add}${unit}`;
   }
+  if (add < 0) return `-$${Math.abs(add)}/sf`;
+  return '';
 }
 
-// ─── STATUS ──────────────────────────────────────────────────────────────────
-function setStatus(txt) {
-  document.getElementById('calc-status').textContent = txt;
+function fieldVisible(field) {
+  if (!field.show_if) return true;
+  return state.productOptions[field.show_if.field] === field.show_if.value;
 }
 
-// ─── STEP 1: CATEGORY PILLS ──────────────────────────────────────────────────
-document.getElementById('category-pills').addEventListener('click', e => {
-  const btn = e.target.closest('[data-cat]');
-  if (!btn) return;
-  const cat = btn.dataset.cat;
-  if (cat === state.category) return;
-  state.category = cat;
-  state.productKey = null;
-  state.serviceId = null;
-  state.optionFields = [];
-  state.selectedModifiers = [];
-  document.querySelectorAll('#category-pills .pill').forEach(p => p.classList.toggle('selected', p.dataset.cat === cat));
-  renderProducts();
-  hideOptions();
-  scheduleCalc();
-});
-
-// ─── STEP 2: PRODUCTS ────────────────────────────────────────────────────────
-function renderProducts() {
-  const grid = document.getElementById('product-grid');
-  const loading = document.getElementById('product-loading');
-  const keys = CAT_MAP[state.category] || [];
-  grid.innerHTML = '';
-  loading.style.display = 'none';
-
-  // Try to fetch from API first, fall back to local map
-  fetchProducts(state.category, keys).then(products => {
-    grid.innerHTML = '';
-    products.forEach(p => {
-      const card = document.createElement('div');
-      card.className = 'product-card' + (p.key === state.productKey ? ' selected' : '');
-      card.dataset.key = p.key;
-      card.innerHTML = `
-        <div class="flex-1 min-w-0">
-          <div class="text-[13px] font-semibold text-gray-900 leading-tight mb-0.5">${p.label}</div>
-          <div class="text-[11px] text-gray-400 leading-tight truncate">${p.desc}</div>
-        </div>
-        <div class="radio-dot"></div>
-      `;
-      card.addEventListener('click', () => selectProduct(p.key, p.id));
-      grid.appendChild(card);
+// ── CATEGORIES ───────────────────────────────────────────────
+function renderCategories() {
+  const grid = document.getElementById('category-grid');
+  grid.innerHTML = CATEGORIES.map(cat => `
+    <label class="radio-card">
+      <input type="radio" name="category" value="${cat.id}" ${cat.id === state.category ? 'checked' : ''} />
+      <span class="card-title">${cat.label}</span>
+      <span class="card-sub">${cat.sub}</span>
+    </label>
+  `).join('');
+  grid.querySelectorAll('input[name="category"]').forEach(inp => {
+    inp.addEventListener('change', () => {
+      if (!inp.checked) return;
+      state.category = inp.value;
+      state.productKey = null;
+      state.serviceId = null;
+      state.productOptions = {};
+      renderProducts();
+      hideOptions();
+      scheduleCalc();
     });
   });
 }
 
-async function fetchProducts(category, keys) {
+// ── PRODUCTS ─────────────────────────────────────────────────
+async function renderProducts() {
+  const grid = document.getElementById('product-grid');
+  const loading = document.getElementById('product-loading');
+  grid.innerHTML = '';
+  loading.style.display = 'flex';
+
+  const products = await fetchProducts();
+  loading.style.display = 'none';
+
+  products.forEach(p => {
+    const label = document.createElement('label');
+    label.className = 'radio-card';
+    label.innerHTML = `
+      <input type="radio" name="product" value="${p.key}" ${p.key === state.productKey ? 'checked' : ''} />
+      <span class="card-title">${p.label}</span>
+      <span class="card-sub">${p.sub}</span>
+    `;
+    label.querySelector('input').addEventListener('change', e => {
+      if (e.target.checked) selectProduct(p.key, p.serviceId);
+    });
+    grid.appendChild(label);
+  });
+
+  if (!state.productKey && products.length) {
+    selectProduct(products[0].key, products[0].serviceId);
+    grid.querySelector('input[name="product"]').checked = true;
+  }
+}
+
+async function fetchProducts() {
+  const keys = CAT_MAP[state.category] || [];
   try {
-    const resp = await fetch('/api/products');
-    if (!resp.ok) throw new Error('not ok');
-    const data = await resp.json();
-    // Find matching category
-    const catData = data.find(c => c.category_id === category);
-    if (catData && catData.products) {
+    if (!state.apiProducts) {
+      const resp = await fetch('/api/products');
+      if (resp.ok) state.apiProducts = await resp.json();
+    }
+    const catData = (state.apiProducts || []).find(c => c.category_id === state.category);
+    if (catData?.products?.length) {
       return catData.products.map(p => ({
-        key: p.id, id: p.id,
+        key: p.id,
+        serviceId: SVC[p.id] || 1,
         label: p.label,
-        desc: p.description || ''
+        sub: p.description || ''
       }));
     }
-  } catch(_) {}
-  // Fallback to local map
+  } catch (_) {}
   return keys.map(k => ({
-    key: k, id: SVC[k],
+    key: k,
+    serviceId: SVC[k],
     label: PRODUCT_LABELS[k]?.label || k,
-    desc: PRODUCT_LABELS[k]?.desc || ''
+    sub: PRODUCT_LABELS[k]?.sub || ''
   }));
 }
 
-function selectProduct(key, id) {
+function selectProduct(key, serviceId) {
   state.productKey = key;
-  state.serviceId = id || SVC[key];
-  state.selectedModifiers = [];
-  document.querySelectorAll('#product-grid .product-card').forEach(c => {
-    c.classList.toggle('selected', c.dataset.key === key);
-  });
-  loadOptions(state.serviceId);
+  state.serviceId = serviceId;
+  state.productOptions = {};
+  loadOptions(key);
   scheduleCalc();
 }
 
-// ─── STEP 3: OPTIONS ─────────────────────────────────────────────────────────
+// ── OPTIONS (radio lists) ────────────────────────────────────
 function hideOptions() {
   document.getElementById('options-section').style.display = 'none';
 }
 
-async function loadOptions(serviceId) {
+async function loadOptions(productKey) {
   const section = document.getElementById('options-section');
-  const fields = document.getElementById('options-fields');
-  fields.innerHTML = '<div class="flex justify-center py-3"><div class="spinner"></div></div>';
+  const fieldsEl = document.getElementById('options-fields');
+  fieldsEl.innerHTML = '<div class="flex justify-center py-2"><div class="spinner"></div></div>';
   section.style.display = 'block';
 
   try {
-    const resp = await fetch(`/api/products/${serviceId}`);
-    if (!resp.ok) throw new Error('not ok');
+    const resp = await fetch(`/api/products/${productKey}`);
+    if (!resp.ok) throw new Error('not found');
     const data = await resp.json();
-    if (data.fields && data.fields.length > 0) {
-      state.optionFields = data.fields;
-      renderOptionFields(data.fields);
-    } else {
-      section.style.display = 'none';
-      state.optionFields = [];
-    }
-  } catch(_) {
+    state.productFields = data.fields || [];
+    (data.fields || []).forEach(f => { if (f.default) state.productOptions[f.id] = f.default; });
+    renderOptionFields();
+  } catch (_) {
     section.style.display = 'none';
-    state.optionFields = [];
+    state.productFields = [];
   }
 }
 
-function renderOptionFields(fields) {
+function renderOptionFields() {
   const container = document.getElementById('options-fields');
   container.innerHTML = '';
-  fields.forEach(field => {
-    const wrap = document.createElement('div');
-    wrap.className = 'mb-4';
-    const labelEl = document.createElement('div');
-    labelEl.className = 'text-[12px] font-bold text-gray-700 mb-2';
-    labelEl.textContent = field.label;
-    wrap.appendChild(labelEl);
 
-    if (!field.options || field.options.length === 0) return;
+  state.productFields.forEach(field => {
+    if (!fieldVisible(field)) return;
 
-    if (field.options.length <= 5) {
-      // Pill row
-      const row = document.createElement('div');
-      row.className = 'pills-row';
-      field.options.forEach(opt => {
-        const isDefault = opt.value === field.default;
-        const btn = document.createElement('button');
-        btn.className = 'pill pill-sm' + (isDefault ? ' selected' : '');
-        btn.dataset.fieldId = field.id;
-        btn.dataset.value = opt.value;
-        let label = opt.label;
-        if (opt.price_add_sqft) label += ` <span class="text-[10px] font-normal opacity-70">+$${opt.price_add_sqft}/sqft</span>`;
-        else if (opt.price_add) label += ` <span class="text-[10px] font-normal opacity-70">+$${opt.price_add}</span>`;
-        btn.innerHTML = label;
-        if (isDefault && opt.value) {
-          addModifier(opt.value);
-        }
-        btn.addEventListener('click', () => {
-          row.querySelectorAll('.pill').forEach(p => p.classList.remove('selected'));
-          btn.classList.add('selected');
-          // Remove other options from same field
-          if (field.options) {
-            field.options.forEach(o => removeModifier(o.value));
-          }
-          addModifier(opt.value);
-          scheduleCalc();
-        });
-        row.appendChild(btn);
-      });
-      wrap.appendChild(row);
-    } else {
-      // Dropdown
-      const sel = document.createElement('select');
-      sel.className = 'full-select';
-      sel.dataset.fieldId = field.id;
-      field.options.forEach(opt => {
-        const o = document.createElement('option');
-        o.value = opt.value;
-        let label = opt.label;
-        if (opt.price_add_sqft) label += ` (+$${opt.price_add_sqft}/sqft)`;
-        else if (opt.price_add) label += ` (+$${opt.price_add})`;
-        o.textContent = label;
-        if (opt.value === field.default) o.selected = true;
-        sel.appendChild(o);
-      });
-      if (field.default) addModifier(field.default);
-      sel.addEventListener('change', () => {
-        if (field.options) field.options.forEach(o => removeModifier(o.value));
-        addModifier(sel.value);
+    const group = document.createElement('div');
+    group.className = 'field-group';
+    group.dataset.fieldId = field.id;
+
+    const note = field.note ? `<div class="field-note">${field.note}</div>` : '';
+    group.innerHTML = `<div class="field-label">${field.label}</div>${note}`;
+
+    const list = document.createElement('div');
+    list.className = 'radio-list';
+    list.setAttribute('role', 'radiogroup');
+
+    (field.options || []).forEach(opt => {
+      const checked = state.productOptions[field.id] === opt.value;
+      const meta = priceBadge(opt);
+      const label = document.createElement('label');
+      label.className = 'radio-item';
+      label.innerHTML = `
+        <input type="radio" name="opt_${field.id}" value="${opt.value}" ${checked ? 'checked' : ''} />
+        <span class="radio-text">${opt.label}</span>
+        ${meta ? `<span class="radio-meta">${meta}</span>` : ''}
+      `;
+      label.querySelector('input').addEventListener('change', e => {
+        if (!e.target.checked) return;
+        state.productOptions[field.id] = opt.value;
+        renderOptionFields();
         scheduleCalc();
       });
-      wrap.appendChild(sel);
-    }
-    container.appendChild(wrap);
+      list.appendChild(label);
+    });
+
+    group.appendChild(list);
+    container.appendChild(group);
   });
+
+  if (!container.children.length) hideOptions();
 }
 
-function addModifier(val) {
-  if (val && !state.selectedModifiers.includes(val)) {
-    state.selectedModifiers.push(val);
-  }
-}
-function removeModifier(val) {
-  state.selectedModifiers = state.selectedModifiers.filter(v => v !== val);
+function getOptionTags() {
+  const tags = [];
+  state.productFields.forEach(field => {
+    if (!fieldVisible(field)) return;
+    const val = state.productOptions[field.id];
+    const opt = (field.options || []).find(o => o.value === val);
+    if (opt) tags.push(opt.label);
+  });
+  return tags;
 }
 
-// ─── STEP 4: DIMENSIONS ──────────────────────────────────────────────────────
+// ── DIMENSIONS ───────────────────────────────────────────────
 function bindDimensions() {
   ['width-ft', 'width-in', 'height-ft', 'height-in'].forEach(id => {
     document.getElementById(id).addEventListener('input', e => {
-      const val = parseInt(e.target.value) || 0;
-      const key = id.replace('-', '_').replace(/-/g, '_');
+      const val = parseInt(e.target.value, 10) || 0;
       if (id === 'width-ft') state.widthFt = val;
       else if (id === 'width-in') state.widthIn = Math.min(val, 11);
       else if (id === 'height-ft') state.heightFt = val;
@@ -676,72 +664,60 @@ function bindDimensions() {
     });
   });
   document.getElementById('width-frac').addEventListener('change', e => {
-    state.widthFrac = e.target.value;
-    updateAreaPreview();
-    scheduleCalc();
+    state.widthFrac = e.target.value; updateAreaPreview(); scheduleCalc();
   });
   document.getElementById('height-frac').addEventListener('change', e => {
-    state.heightFrac = e.target.value;
-    updateAreaPreview();
-    scheduleCalc();
+    state.heightFrac = e.target.value; updateAreaPreview(); scheduleCalc();
   });
-  // Qty
   document.getElementById('qty-minus').addEventListener('click', () => {
-    if (state.quantity > 1) { state.quantity--; document.getElementById('qty-display').textContent = state.quantity; scheduleCalc(); }
+    if (state.quantity > 1) {
+      state.quantity--;
+      document.getElementById('qty-display').textContent = state.quantity;
+      updateAreaPreview(); scheduleCalc();
+    }
   });
   document.getElementById('qty-plus').addEventListener('click', () => {
-    if (state.quantity < 99) { state.quantity++; document.getElementById('qty-display').textContent = state.quantity; scheduleCalc(); }
+    if (state.quantity < 99) {
+      state.quantity++;
+      document.getElementById('qty-display').textContent = state.quantity;
+      updateAreaPreview(); scheduleCalc();
+    }
   });
 }
 
-// ─── STEP 5: LOCATION & JOB ──────────────────────────────────────────────────
+function updateAreaPreview() {
+  const area = calcAreaSqft();
+  const el = document.getElementById('area-preview');
+  el.textContent = area > 0
+    ? `${dimLabel()}${state.quantity > 1 ? ' × ' + state.quantity : ''} = ${area.toFixed(2)} sq ft`
+    : 'Area: — sq ft';
+}
+
+// ── JOB DETAILS ────────────────────────────────────────────────
 function bindJobDetails() {
-  // ZIP
-  const zipInput = document.getElementById('zip-input');
-  zipInput.addEventListener('input', e => {
+  document.getElementById('zip-input').addEventListener('input', e => {
     const z = e.target.value.replace(/\D/g, '').slice(0, 5);
-    zipInput.value = z;
+    e.target.value = z;
     state.zipCode = z;
     state.zipData = null;
     document.getElementById('zip-badge').style.display = 'none';
     if (z.length === 5) {
       clearTimeout(state.zipTimer);
-      state.zipTimer = setTimeout(() => lookupZip(z), 600);
+      state.zipTimer = setTimeout(() => lookupZip(z), 500);
     }
     scheduleCalc();
   });
 
-  // Floor
-  document.getElementById('floor-btns').addEventListener('click', e => {
-    const btn = e.target.closest('[data-floor]');
-    if (!btn) return;
-    state.floor = parseInt(btn.dataset.floor);
-    document.querySelectorAll('#floor-btns .seg-btn').forEach(b => b.classList.toggle('selected', b.dataset.floor === btn.dataset.floor));
-    scheduleCalc();
+  document.querySelectorAll('input[name="floor"]').forEach(inp => {
+    inp.addEventListener('change', () => { if (inp.checked) { state.floor = +inp.value; scheduleCalc(); } });
   });
-
-  // Techs
-  document.getElementById('tech-btns').addEventListener('click', e => {
-    const btn = e.target.closest('[data-tech]');
-    if (!btn) return;
-    state.numTechs = parseInt(btn.dataset.tech);
-    document.querySelectorAll('#tech-btns .sq-btn').forEach(b => b.classList.toggle('selected', b.dataset.tech === btn.dataset.tech));
-    scheduleCalc();
+  document.querySelectorAll('input[name="techs"]').forEach(inp => {
+    inp.addEventListener('change', () => { if (inp.checked) { state.numTechs = +inp.value; scheduleCalc(); } });
   });
-
-  // Urgency
-  document.getElementById('urgency-btns').addEventListener('click', e => {
-    const btn = e.target.closest('[data-urgency]');
-    if (!btn) return;
-    state.urgency = btn.dataset.urgency;
-    document.querySelectorAll('#urgency-btns .urgency-btn').forEach(b => b.classList.toggle('selected', b.dataset.urgency === btn.dataset.urgency));
-    scheduleCalc();
+  document.querySelectorAll('input[name="urgency"]').forEach(inp => {
+    inp.addEventListener('change', () => { if (inp.checked) { state.urgency = inp.value; scheduleCalc(); } });
   });
-
-  // Notes
-  document.getElementById('notes-input').addEventListener('input', e => {
-    state.notes = e.target.value;
-  });
+  document.getElementById('notes-input').addEventListener('input', e => { state.notes = e.target.value; });
 }
 
 async function lookupZip(zip) {
@@ -754,11 +730,10 @@ async function lookupZip(zip) {
     if (!resp.ok) throw new Error();
     const data = await resp.json();
     state.zipData = data;
-    const mult = data.multiplier ? '+' + Math.round((data.multiplier - 1) * 100) + '%' : '';
-    const travel = data.travel_minutes ? `~${data.travel_minutes}min` : '';
-    badge.textContent = `📍 ${data.city || zip}${travel ? ' ' + travel : ''}${mult ? ' ' + mult : ''}`;
+    const mult = data.multiplier > 1 ? ` +${Math.round((data.multiplier - 1) * 100)}%` : '';
+    badge.textContent = `${data.city || zip} · ${data.travel_minutes || '?'}min${mult}`;
     badge.style.display = 'inline-flex';
-  } catch(_) {
+  } catch (_) {
     badge.style.display = 'none';
   } finally {
     loading.style.display = 'none';
@@ -766,22 +741,16 @@ async function lookupZip(zip) {
   }
 }
 
-// ─── CALCULATION ─────────────────────────────────────────────────────────────
+// ── CALCULATE ──────────────────────────────────────────────────
 function scheduleCalc() {
   clearTimeout(state.calcTimer);
-  state.calcTimer = setTimeout(() => runCalc(), 400);
+  state.calcTimer = setTimeout(runCalc, 350);
 }
 
 async function runCalc() {
-  if (!state.serviceId) {
-    setStatus('Select a product type');
-    return;
-  }
+  if (!state.serviceId) { setStatus('Select type'); return; }
   const area = calcAreaSqft();
-  if (area <= 0) {
-    setStatus('Enter dimensions');
-    return;
-  }
+  if (area <= 0) { setStatus('Enter size'); return; }
 
   setStatus('Calculating…');
   document.getElementById('result-spinner').style.display = 'flex';
@@ -795,11 +764,11 @@ async function runCalc() {
     height_in: state.heightIn,
     height_frac: state.heightFrac,
     quantity: state.quantity,
-    zip_code: state.zipCode || null,
+    zip_code: state.zipCode || '91324',
     floor: state.floor,
     num_technicians: state.numTechs,
     urgency: state.urgency,
-    modifier_ids: state.selectedModifiers,
+    modifier_ids: [],
     notes: state.notes
   };
 
@@ -809,174 +778,130 @@ async function runCalc() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     });
-    if (!resp.ok) throw new Error('calc error');
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.detail || 'calc error');
+    }
     const data = await resp.json();
     state.calcResult = data;
     renderResult(data);
-    fetchSimilarJobs(state.category, area);
+    fetchSimilarJobs(state.productKey, data.total_area_sqft || area);
     setStatus('Updated');
-  } catch(err) {
-    // Fallback: client-side estimate
-    const estimate = clientSideEstimate(area);
-    state.calcResult = estimate;
-    renderResult(estimate);
-    setStatus('Estimated (offline)');
+  } catch (err) {
+    setStatus('Error');
+    document.getElementById('result-section').style.display = 'none';
+    document.getElementById('price-bar').classList.remove('visible');
+    document.body.classList.remove('has-price-bar');
   } finally {
     document.getElementById('result-spinner').style.display = 'none';
   }
 }
 
-// Client-side fallback estimate
-function clientSideEstimate(area) {
-  const rates = {
-    residential_single: [12, 18], residential_igu: [22, 35], residential_foggy: [18, 28],
-    commercial_storefront: [28, 45], commercial_partition: [35, 55], commercial_door: [300, 600],
-    shower_door: [400, 900], shower_mirror: [15, 25],
-    specialty_tabletop: [20, 35], specialty_custom: [18, 30], specialty_laminated: [30, 50]
-  };
-  const [rMin, rMax] = rates[state.productKey] || [20, 35];
-  const qty = state.quantity;
-  const urgMulti = { standard: 1, same_day: 1.30, emergency: 1.50 };
-  const floorAdd = { 1: 0, 2: 150, 3: 300 };
-  const zipMult = state.zipData?.multiplier || 1;
-  const tax = 1.1025;
-
-  const baseMin = area * rMin * qty * urgMulti[state.urgency] * zipMult + (floorAdd[state.floor] || 0);
-  const baseMax = area * rMax * qty * urgMulti[state.urgency] * zipMult + (floorAdd[state.floor] || 0);
-
-  return {
-    price_min: baseMin * tax,
-    price_max: baseMax * tax,
-    breakdown: [
-      { label: 'Glass (material)', min: area * rMin * qty, max: area * rMax * qty },
-      { label: 'Labor', min: 75, max: 150 },
-      { label: 'Floor surcharge', min: floorAdd[state.floor] || 0, max: floorAdd[state.floor] || 0 },
-      { label: 'Location factor', min: zipMult - 1, max: zipMult - 1, pct: true },
-      { label: 'Tax (10.25%)', min: baseMin * 0.1025, max: baseMax * 0.1025 }
-    ]
-  };
-}
-
 function renderResult(data) {
   const section = document.getElementById('result-section');
   section.style.display = 'block';
-  section.classList.remove('fade-in');
-  void section.offsetWidth;
-  section.classList.add('fade-in');
 
-  document.getElementById('result-price').textContent = fmtRange(data.price_min, data.price_max);
+  const priceStr = fmtRange(data.grand_total_min, data.grand_total_max);
+  document.getElementById('result-price').textContent = priceStr;
+  document.getElementById('result-meta').textContent =
+    `${data.service_name || ''} · ${data.total_area_sqft || calcAreaSqft()} sqft · ${data.location || 'Local'} · tax incl.`;
 
-  // Tax note
-  const taxNote = document.getElementById('result-tax-note');
-  taxNote.textContent = 'includes LA tax 10.25%';
+  const tags = getOptionTags();
+  document.getElementById('result-tags').innerHTML = tags.length
+    ? tags.map(t => `<span class="opt-tag">${t}</span>`).join('')
+    : '';
 
-  // Breakdown table
-  const table = document.getElementById('breakdown-table');
-  if (data.breakdown && data.breakdown.length > 0) {
-    table.innerHTML = data.breakdown.map(row => {
-      const val = row.pct
-        ? (row.min * 100).toFixed(0) + '%'
-        : fmtRange(row.min, row.max);
-      return `<div class="breakdown-row"><span class="text-gray-600">${row.label}</span><span class="font-medium text-gray-900">${val}</span></div>`;
-    }).join('') + `<div class="breakdown-row"><span>Total</span><span>${fmtRange(data.price_min, data.price_max)}</span></div>`;
-  } else {
-    table.innerHTML = `<div class="breakdown-row"><span>Estimated Total</span><span>${fmtRange(data.price_min, data.price_max)}</span></div>`;
-  }
+  const b = data.breakdown || {};
+  const rows = [
+    ['Material', fmtRange(b.material_min, b.material_max)],
+    ['Labor', fmtRange(b.labor_min, b.labor_max)],
+    b.travel_cost > 0 ? ['Travel', fmt(b.travel_cost)] : null,
+    b.floor_surcharge > 0 ? ['Floor', fmt(b.floor_surcharge)] : null,
+    b.extra_tech_cost > 0 ? ['Extra tech', fmt(b.extra_tech_cost)] : null,
+    b.urgency_label ? [b.urgency_label, ''] : null,
+    ['Subtotal', fmtRange(data.total_min, data.total_max)],
+    ['Tax', fmtRange(data.tax_min, data.tax_max)]
+  ].filter(Boolean);
+
+  document.getElementById('breakdown-table').innerHTML = rows.map(([l, v]) =>
+    `<div class="breakdown-line"><span class="text-gray-500">${l}</span><span class="font-medium text-gray-800">${v}</span></div>`
+  ).join('');
+
+  const notes = (data.notes || []).filter(Boolean);
+  document.getElementById('result-notes').innerHTML = notes.map(n => `<div>${n}</div>`).join('');
+
+  const bar = document.getElementById('price-bar');
+  document.getElementById('bar-price').textContent = priceStr;
+  bar.classList.add('visible');
+  document.body.classList.add('has-price-bar');
 }
 
-// ─── SIMILAR JOBS ─────────────────────────────────────────────────────────────
-async function fetchSimilarJobs(category, areaSqft) {
+async function fetchSimilarJobs(productKey, areaSqft) {
   const section = document.getElementById('similar-section');
-  section.style.cssText = 'display:none';
+  const cat = HCP[productKey];
+  if (!cat || !areaSqft) { section.style.display = 'none'; return; }
   try {
-    const resp = await fetch(`/api/similar-jobs?category=${encodeURIComponent(category)}&area_sqft=${areaSqft.toFixed(2)}`);
+    const resp = await fetch(`/api/similar-jobs?category=${encodeURIComponent(cat)}&area_sqft=${areaSqft}`);
     if (!resp.ok) throw new Error();
-    const data = await resp.json();
-    if (!data || !data.length) return;
-    const rows = data.slice(0, 3);
-    const tableHTML = `
-      <table class="w-full text-xs">
-        <thead><tr class="text-amber-700 border-b border-amber-200">
-          <th class="text-left pb-1 font-semibold">Job</th>
-          <th class="text-right pb-1 font-semibold">Area</th>
-          <th class="text-right pb-1 font-semibold">Price</th>
-        </tr></thead>
+    const jobs = await resp.json();
+    if (!jobs.length) { section.style.display = 'none'; return; }
+    document.getElementById('similar-table').innerHTML = `
+      <table class="w-full">
         <tbody>
-          ${rows.map(r => `<tr class="border-b border-amber-100 last:border-0">
-            <td class="py-1 pr-2 text-amber-900">${r.label || r.service || '—'}</td>
-            <td class="py-1 text-right text-amber-700">${r.area_sqft ? r.area_sqft.toFixed(1) + ' sqft' : '—'}</td>
-            <td class="py-1 text-right font-medium text-amber-900">${r.price ? fmt(r.price) : '—'}</td>
-          </tr>`).join('')}
+          ${jobs.slice(0, 3).map(j => `
+            <tr class="border-b border-amber-100 last:border-0">
+              <td class="py-1 pr-2">#${j.invoice || '—'}</td>
+              <td class="py-1 pr-2 text-right">${j.area_sqft || '—'} sf</td>
+              <td class="py-1 text-right font-semibold">${j.price ? fmt(j.price) : '—'}</td>
+            </tr>
+            <tr><td colspan="3" class="pb-2 text-amber-700/80 leading-tight">${(j.description || '').slice(0, 70)}</td></tr>
+          `).join('')}
         </tbody>
       </table>`;
-    document.getElementById('similar-table').innerHTML = tableHTML;
-    section.style.cssText = 'display:block; background:#FFFBEB; border-color:#FCD34D; border-width:1.5px; border-style:solid; border-radius:12px; padding:12px; margin-bottom:16px;';
-    section.classList.remove('fade-in');
-    void section.offsetWidth;
-    section.classList.add('fade-in');
-  } catch(_) {
+    section.style.display = 'block';
+  } catch (_) {
     section.style.display = 'none';
   }
 }
 
-// ─── COPY & PRINT ────────────────────────────────────────────────────────────
+// ── ACTIONS ───────────────────────────────────────────────────
 document.getElementById('copy-btn').addEventListener('click', () => {
   if (!state.calcResult) return;
-  const product = PRODUCT_LABELS[state.productKey]?.label || state.productKey || 'Glass';
-  const area = calcAreaSqft();
+  const d = state.calcResult;
   const text = [
     'ROMI Glass Estimate',
     '──────────────────',
-    `Service: ${product}`,
-    `Size: ${dimLabel()} (${area.toFixed(2)} sqft)`,
-    `Quantity: ${state.quantity}`,
-    state.zipCode ? `Location: ${state.zipData?.city || state.zipCode}` : null,
-    `Floor: ${state.floor}`,
-    `Urgency: ${state.urgency}`,
-    `Price: ${fmtRange(state.calcResult.price_min, state.calcResult.price_max)}`,
+    `Service: ${d.service_name || state.productKey}`,
+    `Size: ${dimLabel()} (${d.total_area_sqft || calcAreaSqft()} sqft)`,
+    `Qty: ${state.quantity}`,
+    state.zipCode ? `ZIP: ${state.zipCode} (${d.location || ''})` : null,
+    `Floor: ${state.floor} · Techs: ${state.numTechs} · Urgency: ${state.urgency}`,
+    getOptionTags().length ? `Options: ${getOptionTags().join(', ')}` : null,
+    `TOTAL: ${fmtRange(d.grand_total_min, d.grand_total_max)} (incl. tax)`,
     state.notes ? `Notes: ${state.notes}` : null,
-    '',
-    'Generated by ROMI Estimate'
+    '', 'Fast Glass & Windows — 213-566-8886'
   ].filter(Boolean).join('\n');
 
   navigator.clipboard.writeText(text).then(() => {
     const btn = document.getElementById('copy-btn');
-    btn.textContent = '✓ Copied!';
-    setTimeout(() => {
-      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy';
-    }, 2000);
-  }).catch(() => {});
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  });
 });
 
-document.getElementById('print-btn').addEventListener('click', () => {
-  window.print();
+document.getElementById('print-btn').addEventListener('click', () => window.print());
+document.getElementById('bar-scroll').addEventListener('click', () => {
+  document.getElementById('result-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
-// ─── PRINT STYLES ────────────────────────────────────────────────────────────
-const printStyles = document.createElement('style');
-printStyles.textContent = `
-  @media print {
-    header { position: static !important; box-shadow: none !important; border-bottom: 1px solid #E5E7EB !important; }
-    body { background: white !important; }
-    #copy-btn, #print-btn { display: none !important; }
-    .section-card, .result-section { box-shadow: none !important; border: 1px solid #E5E7EB !important; }
-  }
-`;
-document.head.appendChild(printStyles);
-
-// ─── INIT ─────────────────────────────────────────────────────────────────────
+// ── INIT ────────────────────────────────────────────────────────
 function init() {
+  renderCategories();
   bindDimensions();
   bindJobDetails();
   updateAreaPreview();
   renderProducts();
-  // Auto-select first product after a short delay
-  setTimeout(() => {
-    const keys = CAT_MAP[state.category];
-    if (keys && keys.length > 0 && !state.productKey) {
-      selectProduct(keys[0], SVC[keys[0]]);
-    }
-  }, 300);
 }
 
 init();
