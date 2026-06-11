@@ -180,9 +180,14 @@ def calculate(
     total_min = max(total_min, min_price)
     total_max = max(total_max, min_price + 50)
 
-    # Tax
-    tax_min = total_min * tax_rate
-    tax_max = total_max * tax_rate
+    # Narrow the range: max should not be more than 60% above min
+    # This prevents unrealistic $2000 spread
+    if total_max > total_min * 1.6:
+        total_max = round(total_min * 1.6)
+
+    # No tax (California labor services - tax not charged)
+    tax_min = 0.0
+    tax_max = 0.0
 
     # Recommendations
     recommendations = []
@@ -216,10 +221,10 @@ def calculate(
         },
         "total_min": round(total_min, 2),
         "total_max": round(total_max, 2),
-        "tax_min": round(tax_min, 2),
-        "tax_max": round(tax_max, 2),
-        "grand_total_min": round(total_min + tax_min, 2),
-        "grand_total_max": round(total_max + tax_max, 2),
+        "tax_min": 0,
+        "tax_max": 0,
+        "grand_total_min": round(total_min, 2),
+        "grand_total_max": round(total_max, 2),
         "notes": [floor_note, tech_note] + modifier_names + recommendations,
         "recommendations": recommendations,
     }

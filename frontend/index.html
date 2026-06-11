@@ -384,7 +384,7 @@ function showResult(d){
   <div class="result-in bg-white rounded-2xl border-2 border-blue-600 p-4 shadow-md">
     <div class="text-xs text-gray-500 mb-1">${d.service_name} · ${d.total_area_sqft} sqft · ${d.location||'Local'}</div>
     <div class="text-3xl font-bold text-blue-600 mb-0.5">$${d.grand_total_min.toLocaleString()} – $${d.grand_total_max.toLocaleString()}</div>
-    <div class="text-xs text-gray-400 mb-3">includes LA tax 10.25%</div>
+    <div class="text-xs text-gray-400 mb-3">Estimate (no tax)</div>
     <div class="bg-gray-50 rounded-xl p-3 space-y-1.5 text-sm mb-3">
       <div class="flex justify-between"><span class="text-gray-500">Material</span><span>$${d.breakdown.material_min.toFixed(0)}–$${d.breakdown.material_max.toFixed(0)}</span></div>
       <div class="flex justify-between"><span class="text-gray-500">Labor</span><span>$${d.breakdown.labor_min.toFixed(0)}–$${d.breakdown.labor_max.toFixed(0)}</span></div>
@@ -393,7 +393,7 @@ function showResult(d){
       ${d.breakdown.extra_tech_cost>0?`<div class="flex justify-between text-orange-600"><span>Extra tech</span><span>+$${d.breakdown.extra_tech_cost.toFixed(0)}</span></div>`:''}
       ${d.breakdown.urgency_label?`<div class="text-orange-500 text-xs">${d.breakdown.urgency_label}</div>`:''}
       <div class="border-t pt-1.5 flex justify-between font-semibold"><span>Subtotal</span><span>$${d.total_min.toFixed(0)}–$${d.total_max.toFixed(0)}</span></div>
-      <div class="flex justify-between text-gray-400 text-xs"><span>Tax 10.25%</span><span>$${d.tax_min.toFixed(0)}–$${d.tax_max.toFixed(0)}</span></div>
+
     </div>
     ${notes}
     <div class="flex gap-2">
