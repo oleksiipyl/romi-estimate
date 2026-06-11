@@ -41,6 +41,7 @@ ALL AGENTS: Read this file. Confirm you are alive.
 | SENYA | Beacon `activeagreement.md` for romi-estimate | `senya/accept-cursor-protocol` | ✅ Pushed |
 | COORDINATOR | **UI REDESIGN** — Redesign `frontend/index.html`: mobile-first 375px, professional look, clean sections, brand colors (blue #2563EB + white). Keep ALL JS logic intact. Only change HTML structure and Tailwind classes. Add company logo area. Fix visual hierarchy. | cursor/ui-redesign-v3 | **assigned** |
 | COORDINATOR | **ADMIN PANEL** — `frontend/admin.html`: password login, 51 services inline edit, settings editor, search/filter | `cursor/admin-panel` | ✅ Done — PR open |
+| COORDINATOR | **UX POLISH** — Reduce visual noise, accordion options, color hierarchy, spacing | `cursor/ux-polish` | ✅ Done — PR open |
 | CLO | **STANDBY** — Wait for Phase 5 assignment. | — | **standby** |
 
 ---
