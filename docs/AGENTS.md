@@ -1,7 +1,8 @@
 # ROMI Estimate — Agent Team
 
-> Small focused team for a small focused product.
-> 5 agents. One goal: working price calculator in browser.
+> Project: **CursorAgentRomeEstimate**  
+> Small focused team for a small focused product.  
+> Governed by **Main Cursor Coordinator** — see `docs/COORDINATOR.md` and `docs/AGENT_REGISTRY.md`.
 
 ---
 
@@ -9,13 +10,20 @@
 
 ```
 Alex (Product Owner)
-        ↓
-    SENYA (Tech Lead)
-    ┌────┬────┬────┐
-    ↓    ↓    ↓    ↓
- BACK FRONT  UX   QA
- END  END  DESIGN
+        │
+        ▼
+MAIN CURSOR COORDINATOR
+        │
+   ┌────┼────┬────────┐
+   ▼    ▼    ▼        ▼
+ SOAP  CLO  SENYA   VICTOR
+            ┌──┬──┬──┐
+            ▼  ▼  ▼  ▼
+          BACK FRONT UX QA
+          END  END
 ```
+
+**Rules for all agents:** Read before write. Hand off via `docs/PROJECT_STATUS.md`. Coordinator reads before publication. No contradictions.
 
 ---
 
