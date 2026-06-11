@@ -38,9 +38,9 @@ ALL AGENTS: Read this file. Confirm you are alive.
 | COORDINATOR | Multi-agent framework setup | `cursor/coordinator-setup-1c4b` | ✅ Merged to main |
 | SENYA | Hardware pricing + floor surcharge updates | `main` | ✅ Done |
 | SENYA | Beacon `activeagreement.md` for romi-estimate | `senya/accept-cursor-protocol` | ✅ Pushed |
-| COORDINATOR | SYNC — confirm all agents alive | — | **awaiting response** |
-| SOAP | Awaiting first assignment | — | **standby** |
-| CLO | Awaiting first assignment | — | **standby** |
+| COORDINATOR | **PING TEST** — create `docs/COORDINATOR_PING.md`: your id, timestamp, list 3 files in docs/, "I am alive". Commit+push. | cursor/coordinator-ping | **assigned** |
+| SOAP | **PING TEST** — create `docs/SOAP_PING.md`: your id, timestamp, list 3 files in docs/, "I am alive". Commit+push. | cursor/soap-ping | **assigned** |
+| CLO | **PING TEST** — create `docs/CLO_PING.md`: your id, timestamp, list 3 files in docs/, "I am alive". Commit+push. | cursor/clo-ping | **assigned** |
 
 ---
 
