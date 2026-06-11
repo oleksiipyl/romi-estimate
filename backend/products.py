@@ -622,17 +622,20 @@ CATEGORY_META = {
     "specialty":   {"label": "✨ Specialty",     "order": 4},
 }
 
-# Hardware products — added 2026-06-11
+# Hardware products — real prices from Alex 2026-06-11
 HARDWARE_PRODUCTS = [
-    {"id": "hw_operator",   "label": "Window Operator / Crank", "description": "Casement/awning crank mechanism", "service_id": 60, "price_min": 85,  "price_max": 175},
-    {"id": "hw_balance",    "label": "Window Balance",          "description": "Spiral or block-and-tackle",     "service_id": 61, "price_min": 65,  "price_max": 135},
-    {"id": "hw_hardware",   "label": "Window Hardware Repair",  "description": "Locks, handles, hinges",          "service_id": 62, "price_min": 55,  "price_max": 110},
-    {"id": "hw_screen_new", "label": "Screen Replacement",      "description": "New fiberglass or aluminum mesh", "service_id": 63, "price_min": 45,  "price_max": 85},
-    {"id": "hw_screen_fix", "label": "Screen Re-screen",        "description": "Repair existing frame",           "service_id": 64, "price_min": 25,  "price_max": 55},
-    {"id": "hw_reglaze",    "label": "Window Reglazing",        "description": "Re-putty glass in wood frame",    "service_id": 65, "price_min": 45,  "price_max": 85},
-    {"id": "hw_lock",       "label": "Window Lock",             "description": "Sash lock, cam, keyed lock",      "service_id": 66, "price_min": 45,  "price_max": 95},
-    {"id": "hw_track",      "label": "Sliding Door Track",      "description": "Track repair or replacement",     "service_id": 67, "price_min": 75,  "price_max": 165},
-    {"id": "hw_weather",    "label": "Weatherstripping",        "description": "Seal gaps, draft stoppers",       "service_id": 68, "price_min": 35,  "price_max": 75},
+    {"id": "hw_operator",   "label": "Window Operator / Crank",   "description": "Casement/awning crank replacement",  "service_id": 60, "price_min": 350, "price_max": 450},
+    {"id": "hw_balance",    "label": "Window Balance (spiral)",    "description": "Spiral balance replacement",          "service_id": 61, "price_min": 350, "price_max": 450},
+    {"id": "hw_column_bal", "label": "Window Balance (column)",    "description": "Column balancer vinyl windows",        "service_id": 71, "price_min": 350, "price_max": 450},
+    {"id": "hw_roller",     "label": "Window Rollers (bottom)",    "description": "Bottom rollers sliding windows",       "service_id": 70, "price_min": 350, "price_max": 450},
+    {"id": "hw_track",      "label": "Sliding Door Track",         "description": "Rollers + track repair/replace",       "service_id": 67, "price_min": 650, "price_max": 850},
+    {"id": "hw_lock",       "label": "Window Lock / Latch",        "description": "Sash lock, cam lock, keyed lock",      "service_id": 66, "price_min": 70,  "price_max": 150},
+    {"id": "hw_hardware",   "label": "Window Hardware Repair",     "description": "Handles, hinges, general hardware",    "service_id": 62, "price_min": 70,  "price_max": 150},
+    {"id": "hw_casement",   "label": "Casement Adjustment",        "description": "Sagging/misaligned sash fix",          "service_id": 69, "price_min": 150, "price_max": 250},
+    {"id": "hw_screen_new", "label": "Screen Replacement",         "description": "New fiberglass/aluminum mesh screen",  "service_id": 63, "price_min": 45,  "price_max": 85},
+    {"id": "hw_screen_fix", "label": "Screen Re-screen",           "description": "Re-screen existing frame",             "service_id": 64, "price_min": 25,  "price_max": 55},
+    {"id": "hw_reglaze",    "label": "Window Reglazing",           "description": "Re-putty glass in wood frame",         "service_id": 65, "price_min": 45,  "price_max": 85},
+    {"id": "hw_weather",    "label": "Weatherstripping",           "description": "Seal gaps, draft stoppers",            "service_id": 68, "price_min": 35,  "price_max": 75},
 ]
 
 # Update CATEGORY_META with hardware
