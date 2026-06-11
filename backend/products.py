@@ -25,12 +25,12 @@ PRODUCTS = {
                 "id": "frame_type",
                 "label": "Frame Type",
                 "type": "radio",
-                "default": "aluminum",
+                "default": "wood",
                 "options": [
-                    {"value": "aluminum", "label": "Aluminum", "labor_add": 0},
-                    {"value": "vinyl",    "label": "Vinyl",    "labor_add": 0},
                     {"value": "wood",     "label": "Wood",     "labor_add": 15},
+                    {"value": "aluminum", "label": "Aluminum", "labor_add": 0},
                     {"value": "steel",    "label": "Steel",    "labor_add": 35},
+                    {"value": "vinyl",    "label": "Vinyl",    "labor_add": 0},
                 ]
             },
             {
