@@ -383,8 +383,12 @@ async function doCalc(){
     const floorNote=floorAdd>0?`<div class="text-xs text-orange-500 mt-1">⚠️ Floor +$${floorAdd}</div>`:"";
     const qtyNote=qty>1?` · ${qty} units`:" · 1 unit";
     const minNote=mn===minC&&minC>0?`<div class="text-xs text-gray-400">Min charge applies</div>`:"";
-    const hwMid=Math.round((mn+mx)/2);
-    document.getElementById('resultArea').innerHTML=`<div class="result-in bg-white rounded-2xl border-2 border-blue-600 p-4 shadow-md"><div class="text-xs text-gray-500 mb-1">${prod.label}${qtyNote}</div><div class="text-3xl font-bold text-blue-600 mb-0.5">$${hwMid.toLocaleString()}</div><div class="text-xs text-gray-400 mb-1">📞 Озвучивайте: $${mn.toLocaleString()} – $${mx.toLocaleString()}</div>${minNote}${floorNote}<div class="text-xs text-gray-400 mb-3 mt-1">Estimate total</div><button onclick="navigator.clipboard.writeText('${prod.label}: $${hwMid}\nRange: $${mn}–$${mx}\nFast Glass & Windows — 213-566-8886').then(()=>{})" class="w-full bg-blue-600 text-white rounded-xl py-2.5 text-sm font-semibold">📋 Copy</button></div>`;
+    function smartRoundHw(n){if(n<800)return Math.round(n/10)*10;if(n<2000)return Math.round(n/50)*50;return Math.round(n/100)*100;}
+    const hwMid=smartRoundHw((mn+mx)/2);
+    const hwSpread=hwMid<600?0.10:0.15;
+    const hwRangeMin=smartRoundHw(hwMid*(1-hwSpread));
+    const hwRangeMax=smartRoundHw(hwMid*(1+hwSpread));
+    document.getElementById('resultArea').innerHTML=`<div class="result-in bg-white rounded-2xl border-2 border-blue-600 p-4 shadow-md"><div class="text-xs text-gray-500 mb-1">${prod.label}${qtyNote}</div><div class="text-3xl font-bold text-blue-600 mb-0.5">$${hwMid.toLocaleString()}</div><div class="text-xs text-gray-400 mb-1">📞 Озвучивайте: $${hwRangeMin.toLocaleString()} – $${hwRangeMax.toLocaleString()}</div>${minNote}${floorNote}<div class="text-xs text-gray-400 mb-3 mt-1">Estimate total</div><button onclick="navigator.clipboard.writeText('${prod.label}: $${hwMid}\nRange: $${mn}–$${mx}\nFast Glass & Windows — 213-566-8886').then(()=>{})" class="w-full bg-blue-600 text-white rounded-xl py-2.5 text-sm font-semibold">📋 Copy</button></div>`;
     document.getElementById('similarArea').innerHTML='';
     document.getElementById('marketBadge').classList.add('hidden');
     return;
@@ -418,10 +422,18 @@ async function doCalc(){
 
 function showResult(d){
   const notes=(d.notes||[]).filter(n=>n).map(n=>`<div class="text-xs text-orange-600 mt-1">⚠️ ${n}</div>`).join('');
-  // Single price (midpoint) + range footnote for customer calls
-  const midPrice = Math.round((d.grand_total_min + d.grand_total_max) / 2);
-  const rangeMin = d.grand_total_min;
-  const rangeMax = d.grand_total_max;
+  // Smart rounding: <800 → $10, 800-2000 → $50, 2000+ → $100
+  function smartRound(n) {
+    if (n < 800) return Math.round(n / 10) * 10;
+    if (n < 2000) return Math.round(n / 50) * 50;
+    return Math.round(n / 100) * 100;
+  }
+  // Single price (midpoint) rounded
+  const midPrice = smartRound((d.grand_total_min + d.grand_total_max) / 2);
+  // Customer-facing range: <$600 → ±10%, $600+ → ±15%
+  const spread = midPrice < 600 ? 0.10 : 0.15;
+  const rangeMin = smartRound(midPrice * (1 - spread));
+  const rangeMax = smartRound(midPrice * (1 + spread));
   // Technician recommendation based on glass weight/area
   const techRec = getTechRecommendation(d.total_area_sqft, state.floor, state.techs);
   document.getElementById('resultArea').innerHTML=`
@@ -429,11 +441,11 @@ function showResult(d){
     <div class="text-xs text-gray-500 mb-1">${d.service_name} · ${d.total_area_sqft} sqft · ${d.location||'Local'}</div>
     <div class="text-3xl font-bold text-blue-600 mb-0.5">$${midPrice.toLocaleString()}</div>
     <div class="text-xs text-gray-400 mb-1">📞 Озвучивайте клиенту: $${rangeMin.toLocaleString()} – $${rangeMax.toLocaleString()}</div>
-    <div id="marketBadge" class="hidden text-xs rounded-full px-2.5 py-0.5 mb-2"></div>
+    <div id="marketBadge" class="hidden text-sm font-semibold rounded-xl px-3 py-2 mb-2 border-2"></div>
     ${techRec?`<div class="bg-amber-50 border border-amber-300 rounded-xl px-3 py-1.5 text-xs text-amber-800 mb-2">${techRec}</div>`:''}
     <div class="bg-gray-50 rounded-xl p-3 space-y-1.5 text-sm mb-3">
-      <div class="flex justify-between"><span class="text-gray-500">Material</span><span>$${Math.round((d.breakdown.material_min+d.breakdown.material_max)/2)}</span></div>
-      <div class="flex justify-between"><span class="text-gray-500">Labor</span><span>$${Math.round((d.breakdown.labor_min+d.breakdown.labor_max)/2)}</span></div>
+      <div class="flex justify-between"><span class="text-gray-500">Material</span><span>$${smartRound((d.breakdown.material_min+d.breakdown.material_max)/2)}</span></div>
+      <div class="flex justify-between"><span class="text-gray-500">Labor</span><span>$${smartRound((d.breakdown.labor_min+d.breakdown.labor_max)/2)}</span></div>
       ${d.breakdown.travel_cost>0?`<div class="flex justify-between"><span class="text-gray-500">Travel</span><span>$${d.breakdown.travel_cost.toFixed(0)}</span></div>`:''}
       ${d.breakdown.floor_surcharge>0?`<div class="flex justify-between text-orange-600"><span>Floor surcharge</span><span>+$${d.breakdown.floor_surcharge}</span></div>`:''}
       ${d.breakdown.extra_tech_cost>0?`<div class="flex justify-between text-orange-600"><span>Extra tech</span><span>+$${d.breakdown.extra_tech_cost.toFixed(0)}</span></div>`:''}
@@ -492,23 +504,29 @@ function showMarketBadge(d) {
   const ourMid = (d.total_min + d.total_max) / 2;
   const area = d.total_area_sqft;
   if (area < 1) { badge.classList.add('hidden'); return; }
-  const mktMid = area * m.avg;
-  const diff = Math.round((ourMid - mktMid) / mktMid * 100);
-  // Real assessment: overpriced / fair / underpriced
-  let label, cls;
+  const mktAvg = Math.round(area * m.avg);
+  const mktLow = Math.round(area * m.low);
+  const mktHigh = Math.round(area * m.high);
+  const diff = Math.round((ourMid - mktAvg) / mktAvg * 100);
+  let icon, status, cls;
   if (diff > 15) {
-    label = '🟡 Цена завышена +' + diff + '% от рынка';
-    cls = 'bg-amber-50 border-amber-200 text-amber-700';
+    icon = '🟡'; status = 'ЗАВЫШЕНА';
+    cls = 'bg-amber-50 border-amber-300 text-amber-800';
   } else if (diff < -15) {
-    label = '🔵 Цена занижена ' + diff + '% от рынка';
-    cls = 'bg-blue-50 border-blue-200 text-blue-700';
+    icon = '🔵'; status = 'ЗАНИЖЕНА';
+    cls = 'bg-blue-50 border-blue-300 text-blue-800';
   } else {
-    label = '✅ Рыночная цена (' + (diff >= 0 ? '+' : '') + diff + '%)';
-    cls = 'bg-green-50 border-green-200 text-green-700';
+    icon = '✅'; status = 'РЫНОЧНАЯ';
+    cls = 'bg-green-50 border-green-300 text-green-800';
   }
-  badge.textContent = label;
+  badge.innerHTML = `
+    <div class="flex items-center justify-between">
+      <span>${icon} ${status} <span class="font-normal text-xs opacity-70">(${diff>=0?'+':''}${diff}%)</span></span>
+    </div>
+    <div class="text-xs font-normal opacity-80 mt-0.5">Рынок LA: $${mktAvg} средняя · $${mktLow}–$${mktHigh} диапазон</div>
+  `;
   badge.classList.remove('hidden');
-  badge.className = `text-xs rounded-full px-2.5 py-0.5 border ${cls}`;
+  badge.className = `text-sm font-semibold rounded-xl px-3 py-2 mb-2 border-2 ${cls}`;
 }
 
 async function loadSim(cat,area){
@@ -518,10 +536,7 @@ async function loadSim(cat,area){
     const jobs=await fj(`/api/similar-jobs?category=${cat}&area_sqft=${area}`);
     if(!jobs.length){el.innerHTML='';return;}
     const rows=jobs.map(j=>`<tr class="border-b border-amber-100 last:border-0"><td class="py-1.5 pr-2 text-xs text-gray-600 font-medium">#${j.invoice}</td><td class="py-1.5 pr-2 text-xs">${j.area_sqft}sf</td><td class="py-1.5 pr-2 text-xs font-bold text-blue-700">$${j.price.toLocaleString()}</td><td class="py-1.5 text-xs text-gray-400">${j.zip_code||''} ${j.date?j.date.slice(0,7):''}</td></tr><tr><td colspan="4" class="pb-2 text-xs text-gray-400 leading-tight">${j.description.slice(0,80)}</td></tr>`).join('');
-    // Market stats for this category
-    const m2 = MARKET[cat];
-    const mktLine = m2 ? `<div class="mt-2 pt-2 border-t border-amber-200 text-xs text-amber-600">📊 LA market avg: <strong>$${Math.round(area * m2.avg)}</strong> · range $${Math.round(area * m2.low)}–$${Math.round(area * m2.high)} for ${area} sqft</div>` : '';
-    el.innerHTML=`<div class="bg-amber-50 border border-amber-200 rounded-2xl p-3"><div class="text-xs font-semibold text-amber-800 mb-2">📋 Similar past jobs (${jobs.length})</div><table class="w-full">${rows}</table>${mktLine}</div>`;
+    el.innerHTML=`<div class="bg-amber-50 border border-amber-200 rounded-2xl p-3"><div class="text-xs font-semibold text-amber-800 mb-2">📋 Similar past jobs (${jobs.length})</div><table class="w-full">${rows}</table></div>`;
   }catch{}
 }
 
@@ -539,8 +554,10 @@ function calcOptionsSurcharge(){
 
 function copyRes(){
   const d=window._r;if(!d)return;
-  const mid=window._midPrice||Math.round((d.grand_total_min+d.grand_total_max)/2);
-  navigator.clipboard.writeText(`ESTIMATE — ${window._rl}\n${d.total_area_sqft} sqft | ${d.location}\n\nPrice: $${mid}\nRange: $${d.grand_total_min}–$${d.grand_total_max}\n\nFast Glass & Windows — 213-566-8886`).then(()=>{event.target.textContent='✅';setTimeout(()=>event.target.textContent='📋 Copy',1500);});
+  function sr(n){if(n<800)return Math.round(n/10)*10;if(n<2000)return Math.round(n/50)*50;return Math.round(n/100)*100;}
+  const mid=window._midPrice||sr((d.grand_total_min+d.grand_total_max)/2);
+  const sp=mid<600?0.10:0.15; const lo=sr(mid*(1-sp)), hi=sr(mid*(1+sp));
+  navigator.clipboard.writeText(`ESTIMATE — ${window._rl}\n${d.total_area_sqft} sqft | ${d.location}\n\nPrice: $${mid}\nRange: $${lo}–$${hi}\n\nFast Glass & Windows — 213-566-8886`).then(()=>{event.target.textContent='✅';setTimeout(()=>event.target.textContent='📋 Copy',1500);});
 }
 
 init();
