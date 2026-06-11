@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from database import get_db, init_db, seed_services, seed_zip_multipliers, seed_modifiers, seed_settings
 from calculator import calculate, parse_dimensions
+from products import PRODUCTS, get_products_by_category, CATEGORY_META, get_product
 
 # Init DB on startup
 init_db()
@@ -102,6 +103,30 @@ def get_services(category: Optional[str] = None):
         ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+@app.get("/api/products")
+def get_products_api():
+    """Get all products grouped by category — new Victor structure"""
+    by_cat = get_products_by_category()
+    result = []
+    for cat_id, meta in sorted(CATEGORY_META.items(), key=lambda x: x[1]["order"]):
+        if cat_id in by_cat:
+            result.append({
+                "category_id": cat_id,
+                "category_label": meta["label"],
+                "products": by_cat[cat_id]
+            })
+    return result
+
+
+@app.get("/api/products/{product_id}")
+def get_product_api(product_id: str):
+    """Get single product with all fields"""
+    p = get_product(product_id)
+    if not p:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return p
 
 
 @app.get("/api/services/categories")
