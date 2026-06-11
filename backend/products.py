@@ -27,10 +27,10 @@ PRODUCTS = {
                 "type": "radio",
                 "default": "vinyl",
                 "options": [
-                    {"value": "wood",     "label": "Wood",     "labor_add": 15},
                     {"value": "vinyl",    "label": "Vinyl",    "labor_add": 0},
                     {"value": "aluminum", "label": "Aluminum", "labor_add": 0},
                     {"value": "steel",    "label": "Steel",    "labor_add": 20},
+                    {"value": "wood",     "label": "Wood",     "labor_add": 15},
                 ]
             },
             {
@@ -54,10 +54,12 @@ PRODUCTS = {
                 "type": "radio",
                 "default": "1/8",
                 "options": [
-                    {"value": "1/8",  "label": "1/8\" (standard)",  "price_add_sqft": 0},
-                    {"value": "3/16", "label": "3/16\"",             "price_add_sqft": 2},
-                    {"value": "1/4",  "label": "1/4\"",              "price_add_sqft": 4},
-                    {"value": "3/8",  "label": "3/8\"",              "price_add_sqft": 8},
+                    {"value": "3/32", "label": "3/32\"", "price_add_sqft": -2},
+                    {"value": "1/8",  "label": "1/8\"",  "price_add_sqft": 0},
+                    {"value": "3/16", "label": "3/16\"", "price_add_sqft": 2},
+                    {"value": "1/4",  "label": "1/4\"",  "price_add_sqft": 4},
+                    {"value": "3/8",  "label": "3/8\"",  "price_add_sqft": 8},
+                    {"value": "1/2",  "label": "1/2\"",  "price_add_sqft": 14},
                 ]
             },
             {
@@ -67,8 +69,8 @@ PRODUCTS = {
                 "default": "annealed",
                 "note": "Required by code: doors, sidelights, bathrooms, near floor",
                 "options": [
-                    {"value": "annealed", "label": "Annealed (standard)", "price_add_sqft": 0},
-                    {"value": "tempered", "label": "Tempered (+$15/sqft)", "price_add_sqft": 15},
+                    {"value": "annealed", "label": "Annealed", "price_add_sqft": 0},
+                    {"value": "tempered", "label": "Tempered", "price_add_sqft": 15},
                 ]
             },
         ]

@@ -144,8 +144,8 @@ def seed_services():
         (48, "Custom Decorative Glass", "Specialty", "per sq ft", 50, 150, 50, 100, 120, 340, 0.50, "Art/pattern glass"),
 
         # SHOWER/MIRROR
-        (49, "Shower Door/Enclosure", "Shower & Mirror", "per unit", 300, 600, 200, 400, 600, 1200, 0.50, "Frameless or framed"),
-        (50, "Custom Mirror", "Shower & Mirror", "per sq ft", 15, 30, 20, 40, 45, 90, 0.55, "Cut and install"),
+        (49, "Shower Door/Enclosure", "Shower & Mirror", "per unit", 300, 600, 200, 400, 40, 90, 0.50, "Frameless or framed"),
+        (50, "Custom Mirror", "Shower & Mirror", "per sq ft", 15, 30, 20, 40, 33, 83, 0.55, "Cut and install"),
 
         # ADD-ON
         (51, "Tempered Glass Upgrade", "Add-on", "per sq ft", 8, 15, 5, 10, 15, 30, 0.60, "Upgrade to tempered"),
