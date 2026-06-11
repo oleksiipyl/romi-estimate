@@ -1,0 +1,27 @@
+---
+description: "Protocol for reconnecting with Senya (OpenClaw Tech Lead) if connection is lost"
+globs: ["docs/**"]
+alwaysApply: true
+---
+
+# Senya Reconnect Protocol
+
+If you receive a SYNC command or notice Senya (OpenClaw) was offline:
+
+1. Read `docs/activeagreement.md` — Senya's presence beacon
+2. Read `docs/PROJECT_STATUS.md` — current task board
+3. Find your row in Active Work table
+4. If task assigned → execute → commit → push → update status
+5. If no task → create `docs/<YOUR_AGENT_ID>_STATUS.md` with:
+   - agent_id, timestamp, status: ONLINE_WAITING, files you can see
+
+Senya communicates via:
+- Git push to main (task files)
+- Cursor Cloud API POST (wake trigger)
+- GitHub PR comments (review feedback)
+
+Response language: Russian for Alex, English for code/docs.
+
+If Senya's `docs/activeagreement.md` is missing or outdated (>24h):
+- Continue your last assigned task if status was "in-progress"
+- Otherwise wait and push a STATUS.md beacon
