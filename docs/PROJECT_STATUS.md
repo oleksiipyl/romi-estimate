@@ -35,6 +35,7 @@ ALL AGENTS: Read this file. Confirm you are alive.
 
 | Agent | Task | Branch | Status |
 |-------|------|--------|--------|
+| COORDINATOR | UI redesign v3 — mobile-first professional | `cursor/ui-redesign-v3` | In progress |
 | COORDINATOR | Multi-agent framework setup | `cursor/coordinator-setup-1c4b` | ✅ Merged to main |
 | SENYA | Hardware pricing + floor surcharge updates | `main` | ✅ Done |
 | SENYA | Beacon `activeagreement.md` for romi-estimate | `senya/accept-cursor-protocol` | ✅ Pushed |
