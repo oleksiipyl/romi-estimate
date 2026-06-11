@@ -16,9 +16,15 @@
     .pill.on { background:#1d4ed8; color:#fff; border-color:#1d4ed8; box-shadow: 0 1px 3px rgba(29,78,216,.25); }
     .pill.on .cat-lbl { color:#fff; }
     .card-sel { transition: all .15s ease; cursor: pointer; }
-    .card-sel.on { border-color:#2563eb; background:#eff6ff; box-shadow: 0 0 0 1px #2563eb; }
-    .opt-btn { transition: all .15s ease; cursor: pointer; min-height: 40px; }
-    .opt-btn.on { background:#1d4ed8; color:#fff; border-color:#1d4ed8; }
+    .card-sel.on { border-color:#93c5fd; background:#f8fafc; box-shadow: 0 0 0 1px #bfdbfe; }
+    .opt-btn {
+      transition: all .15s ease; cursor: pointer; min-height: 40px;
+      border: 1.5px solid #e2e8f0; background: #fff; color: #475569;
+    }
+    .opt-btn.on {
+      border-color: #93c5fd; background: #f0f9ff; color: #1d4ed8;
+      box-shadow: 0 0 0 1px #dbeafe;
+    }
     .result-in { animation: ri .25s ease; }
     @keyframes ri { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
     input[type=number]::-webkit-outer-spin-button,
@@ -27,15 +33,15 @@
     .section-card {
       background: #fff;
       border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 12px;
+      border-radius: 14px;
+      padding: 16px;
       box-shadow: 0 1px 2px rgba(15,23,42,.04);
     }
     .section-hd {
       display: flex;
       align-items: center;
       gap: 8px;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
     }
     .step-num {
       width: 20px; height: 20px;
@@ -99,7 +105,7 @@
   </div>
 </header>
 
-<main class="max-w-lg mx-auto px-3 pt-3 space-y-2.5">
+<main class="max-w-lg mx-auto px-3 pt-4 space-y-4">
 
   <!-- 1. CATEGORY -->
   <section class="section-card">
@@ -120,7 +126,7 @@
   </section>
 
   <!-- 3. OPTIONS (dynamic) -->
-  <div id="optArea" class="space-y-2.5"></div>
+  <div id="optArea" class="space-y-3"></div>
 
   <!-- 4. DIMENSIONS -->
   <section class="section-card" id="dimSection" style="display:none">
@@ -206,25 +212,25 @@
     <div class="mb-3">
       <div class="field-lbl">Floor</div>
       <div class="grid grid-cols-3 gap-1.5">
-        <button type="button" onclick="setOpt('floor',1,this)" class="opt-btn on border border-blue-600 bg-blue-600 text-white rounded-lg py-2 text-xs font-semibold">1st</button>
-        <button type="button" onclick="setOpt('floor',2,this)" class="opt-btn border border-slate-200 text-slate-700 rounded-lg py-1.5 text-xs font-medium leading-tight">2nd<br><span class="text-slate-400 text-[9px]">+$200</span></button>
-        <button type="button" onclick="setOpt('floor',3,this)" class="opt-btn border border-slate-200 text-slate-700 rounded-lg py-1.5 text-xs font-medium leading-tight">3rd+<br><span class="text-slate-400 text-[9px]">+$300</span></button>
+        <button type="button" onclick="setOpt('floor',1,this)" class="opt-btn on rounded-lg py-2 text-xs font-semibold">1st</button>
+        <button type="button" onclick="setOpt('floor',2,this)" class="opt-btn rounded-lg py-1.5 text-xs font-medium leading-tight">2nd<br><span class="text-slate-400 text-[9px]">+$200</span></button>
+        <button type="button" onclick="setOpt('floor',3,this)" class="opt-btn rounded-lg py-1.5 text-xs font-medium leading-tight">3rd+<br><span class="text-slate-400 text-[9px]">+$300</span></button>
       </div>
     </div>
 
     <div class="mb-3">
       <div class="field-lbl">Technicians</div>
       <div class="flex gap-1.5">
-        <button type="button" onclick="setOpt('techs',1,this)" class="opt-btn on border border-blue-600 bg-blue-600 text-white rounded-lg w-11 py-2 text-sm font-bold">1</button>
-        <button type="button" onclick="setOpt('techs',2,this)" class="opt-btn border border-slate-200 text-slate-700 rounded-lg w-11 py-2 text-sm font-bold">2</button>
-        <button type="button" onclick="setOpt('techs',3,this)" class="opt-btn border border-slate-200 text-slate-700 rounded-lg w-11 py-2 text-sm font-bold">3</button>
+        <button type="button" onclick="setOpt('techs',1,this)" class="opt-btn on rounded-lg w-11 py-2 text-sm font-bold">1</button>
+        <button type="button" onclick="setOpt('techs',2,this)" class="opt-btn rounded-lg w-11 py-2 text-sm font-bold">2</button>
+        <button type="button" onclick="setOpt('techs',3,this)" class="opt-btn rounded-lg w-11 py-2 text-sm font-bold">3</button>
       </div>
     </div>
 
     <div class="mb-3">
       <div class="field-lbl">Urgency</div>
       <div class="space-y-1">
-        <button type="button" onclick="setOpt('urgency','normal',this)" class="opt-btn on w-full text-left border border-blue-600 bg-blue-600 text-white rounded-lg px-2.5 py-2 text-xs font-medium">Standard <span class="opacity-75">(3–5 days)</span></button>
+        <button type="button" onclick="setOpt('urgency','normal',this)" class="opt-btn on w-full text-left rounded-lg px-2.5 py-2 text-xs font-medium">Standard <span class="opacity-75">(3–5 days)</span></button>
         <button type="button" onclick="setOpt('urgency','urgent',this)" class="opt-btn w-full text-left border border-slate-200 text-slate-700 rounded-lg px-2.5 py-2 text-xs font-medium">Same-Day <span class="text-orange-500 font-semibold">+30%</span></button>
         <button type="button" onclick="setOpt('urgency','emergency',this)" class="opt-btn w-full text-left border border-slate-200 text-slate-700 rounded-lg px-2.5 py-2 text-xs font-medium">Emergency <span class="text-red-500 font-semibold">+50%</span></button>
       </div>
@@ -381,7 +387,7 @@ function renderOpts(){
           const add=o.price_add_sqft||o.price_add_unit||o.price_add_lf||0;
           const unit=o.price_add_sqft?'/sf':o.price_add_lf?'/lf':o.labor_add?'+labor':'';
           const badge=add>0?` <span class="text-xs opacity-70">+$${add}${unit}</span>`:add<0?` <span class="text-xs opacity-70">-$${Math.abs(add)}${unit}</span>`:'';
-          b.className=`opt-btn border-2 ${on?'border-blue-600 bg-blue-600 text-white':'border-gray-200 text-gray-700'} rounded-xl px-3 py-1.5 text-sm font-medium`;
+          b.className=`opt-btn ${on?'on':''} rounded-xl px-3 py-1.5 text-sm font-medium`;
           b.innerHTML=o.label+badge;
           b.onclick=()=>{opts[field.id]=o.value;renderOpts();sched();};
           wrap.appendChild(b);
@@ -461,11 +467,9 @@ function onZip(v){
 function setOpt(key,val,btn){
   state[key]=val;
   btn.closest('div').querySelectorAll('.opt-btn').forEach(b=>{
-    b.classList.remove('on','bg-blue-600','text-white','border-blue-600');
-    b.classList.add('border-gray-200','text-gray-700');
+    b.classList.remove('on');
   });
-  btn.classList.add('on','bg-blue-600','text-white','border-blue-600');
-  btn.classList.remove('border-gray-200','text-gray-700');
+  btn.classList.add('on');
   sched();
 }
 
