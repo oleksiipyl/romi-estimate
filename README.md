@@ -1,6 +1,10 @@
-# ROMI Estimate — Glass Price Calculator
+# CursorAgentRomeEstimate — ROMI Estimate
 
-> Simple web calculator for glass repair estimates.
+> **Project:** CursorAgentRomeEstimate  
+> **Product:** ROMI Estimate — glass repair price calculator  
+> **Coordination:** Main Cursor Coordinator + agent team (see `docs/COORDINATOR.md`)
+
+Simple web calculator for glass repair estimates.
 > Open in browser → enter dimensions → get price range.
 > No AI required. Works from price database directly.
 
