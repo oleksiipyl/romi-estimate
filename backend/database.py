@@ -277,7 +277,7 @@ def seed_settings():
         ("extra_tech_rate", "75", "$/hour for each additional technician"),
         ("urgent_multiplier", "1.30", "Multiplier for same-day service"),
         ("emergency_multiplier", "1.50", "Multiplier for emergency/after-hours"),
-        ("min_job_price", "150", "Minimum job price"),
+        ("min_job_price", "300", "Minimum job price (covers travel cost)"),
         ("tax_rate", "0.1025", "LA County sales tax (10.25%)"),
         ("material_markup", "2.75", "Material cost × this = sell price"),
         ("base_zip", "91324", "Base location ZIP (Northridge)"),
