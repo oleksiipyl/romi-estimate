@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Fast Glass & Windows</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔧</text></svg>">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    }
+    .inp {
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      background: #fff;
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .inp:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+    .inp.dirty { border-color: #f59e0b; background: #fffbeb; }
+    .logo-mark {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(29,78,216,.3);
+    }
+    .tab-btn { transition: all .15s ease; }
+    .tab-btn.on { background: #1d4ed8; color: #fff; border-color: #1d4ed8; }
+    .cat-pill { transition: all .15s ease; cursor: pointer; }
+    .cat-pill.on { background: #eff6ff; color: #1d4ed8; border-color: #2563eb; }
+    input[type=number]::-webkit-outer-spin-button,
+    input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; }
+    .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .toast-in { animation: toast .25s ease; }
+    @keyframes toast { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    .toggle { position: relative; width: 36px; height: 20px; cursor: pointer; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle .slider {
+      position: absolute; inset: 0;
+      background: #cbd5e1; border-radius: 20px;
+      transition: .2s;
+    }
+    .toggle .slider::before {
+      content: ''; position: absolute;
+      width: 16px; height: 16px; left: 2px; bottom: 2px;
+      background: #fff; border-radius: 50%;
+      transition: .2s;
+      box-shadow: 0 1px 2px rgba(0,0,0,.15);
+    }
+    .toggle input:checked + .slider { background: #2563eb; }
+    .toggle input:checked + .slider::before { transform: translateX(16px); }
+  </style>
+</head>
+<body class="min-h-screen pb-10">
+
+<!-- LOGIN -->
+<div id="loginScreen" class="min-h-screen flex items-center justify-center px-4">
+  <div class="w-full max-w-sm bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+    <div class="flex items-center gap-3 mb-6">
+      <div class="logo-mark" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round">
+          <rect x="3" y="11" width="18" height="11" rx="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="text-base font-bold text-slate-900">Admin Panel</h1>
+        <p class="text-xs text-slate-500">Fast Glass &amp; Windows</p>
+      </div>
+    </div>
+    <label class="block text-xs font-medium text-slate-600 mb-1.5" for="loginPassword">Password</label>
+    <input type="password" id="loginPassword" class="inp w-full px-3 py-2.5 text-sm mb-3" placeholder="Enter admin password" autocomplete="current-password">
+    <p id="loginError" class="text-xs text-red-600 mb-3 hidden"></p>
+    <button id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm py-2.5 rounded-lg transition">Sign In</button>
+    <a href="/" class="block text-center text-xs text-slate-400 hover:text-blue-600 mt-4 transition">← Back to Calculator</a>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="appScreen" class="hidden">
+  <header class="bg-white/95 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-30">
+    <div class="max-w-5xl mx-auto px-3 py-2.5 flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <div class="logo-mark" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round">
+            <rect x="3" y="11" width="18" height="11" rx="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+        </div>
+        <div class="min-w-0">
+          <h1 class="text-sm font-bold text-slate-900 leading-tight">Admin Panel</h1>
+          <p class="text-[10px] text-slate-500 leading-tight" id="serviceCount">Loading…</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <a href="/" class="text-[10px] font-medium text-slate-400 hover:text-blue-600 border border-slate-200 rounded-lg px-2 py-1.5 transition">Calculator</a>
+        <button id="logoutBtn" class="text-[10px] font-medium text-slate-400 hover:text-red-600 border border-slate-200 rounded-lg px-2 py-1.5 transition">Logout</button>
+      </div>
+    </div>
+    <div class="max-w-5xl mx-auto px-3 pb-2 flex gap-2">
+      <button class="tab-btn on text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600" data-tab="services">Services</button>
+      <button class="tab-btn text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600" data-tab="settings">Settings</button>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-3 pt-3">
+
+    <!-- SERVICES TAB -->
+    <div id="tabServices">
+      <div class="bg-white rounded-xl border border-slate-200 p-3 mb-3 shadow-sm">
+        <div class="flex flex-col sm:flex-row gap-2">
+          <input type="search" id="searchInput" class="inp flex-1 px-3 py-2 text-sm" placeholder="Search by name or notes…">
+          <select id="categoryFilter" class="inp px-3 py-2 text-sm sm:w-44">
+            <option value="">All categories</option>
+          </select>
+        </div>
+        <div id="categoryPills" class="flex flex-wrap gap-1.5 mt-2"></div>
+      </div>
+
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="tbl-wrap">
+          <table class="w-full text-xs">
+            <thead>
+              <tr class="bg-slate-50 border-b border-slate-200 text-left text-[10px] uppercase tracking-wide text-slate-500">
+                <th class="px-2 py-2 font-semibold w-8">#</th>
+                <th class="px-2 py-2 font-semibold min-w-[140px]">Service</th>
+                <th class="px-2 py-2 font-semibold">Category</th>
+                <th class="px-2 py-2 font-semibold">Unit</th>
+                <th class="px-2 py-2 font-semibold text-right">Mat $</th>
+                <th class="px-2 py-2 font-semibold text-right">Labor $</th>
+                <th class="px-2 py-2 font-semibold text-right">Price $</th>
+                <th class="px-2 py-2 font-semibold text-center">On</th>
+                <th class="px-2 py-2 font-semibold w-16"></th>
+              </tr>
+            </thead>
+            <tbody id="servicesBody"></tbody>
+          </table>
+        </div>
+        <p id="noResults" class="hidden text-center text-sm text-slate-400 py-8">No services match your filter.</p>
+      </div>
+    </div>
+
+    <!-- SETTINGS TAB -->
+    <div id="tabSettings" class="hidden">
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-3 py-2 border-b border-slate-200 bg-slate-50">
+          <p class="text-xs text-slate-500">Global pricing and company settings</p>
+        </div>
+        <div id="settingsList" class="divide-y divide-slate-100"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 hidden">
+  <div id="toastInner" class="toast-in px-4 py-2 rounded-lg text-sm font-medium shadow-lg"></div>
+</div>
+
+<script>
+const API = '';
+const PW_KEY = 'fg_admin_pw';
+let password = '';
+let services = [];
+let settings = [];
+let dirtyRows = new Set();
+let dirtySettings = new Set();
+
+// ── Auth ──────────────────────────────────────────────
+function getPassword() {
+  return sessionStorage.getItem(PW_KEY) || '';
+}
+
+function setPassword(pw) {
+  password = pw;
+  sessionStorage.setItem(PW_KEY, pw);
+}
+
+function clearPassword() {
+  password = '';
+  sessionStorage.removeItem(PW_KEY);
+}
+
+async function api(path, opts = {}) {
+  const sep = path.includes('?') ? '&' : '?';
+  const url = `${API}${path}${sep}password=${encodeURIComponent(password)}`;
+  const res = await fetch(url, {
+    headers: { 'Content-Type': 'application/json' },
+    ...opts,
+  });
+  if (res.status === 401) {
+    clearPassword();
+    showLogin();
+    throw new Error('Session expired');
+  }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Error ${res.status}`);
+  }
+  return res.json();
+}
+
+function showLogin() {
+  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('appScreen').classList.add('hidden');
+}
+
+function showApp() {
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('appScreen').classList.remove('hidden');
+}
+
+async function tryLogin(pw) {
+  password = pw;
+  const data = await api('/api/admin/services');
+  setPassword(pw);
+  services = data;
+  showApp();
+  renderCategoryFilters();
+  renderServices();
+  loadSettings();
+}
+
+// ── Toast ───────────────────────────────────────────
+let toastTimer;
+function toast(msg, ok = true) {
+  const el = document.getElementById('toast');
+  const inner = document.getElementById('toastInner');
+  inner.textContent = msg;
+  inner.className = `toast-in px-4 py-2 rounded-lg text-sm font-medium shadow-lg ${ok ? 'bg-slate-800 text-white' : 'bg-red-600 text-white'}`;
+  el.classList.remove('hidden');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.add('hidden'), 2500);
+}
+
+// ── Tabs ────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+    const tab = btn.dataset.tab;
+    document.getElementById('tabServices').classList.toggle('hidden', tab !== 'services');
+    document.getElementById('tabSettings').classList.toggle('hidden', tab !== 'settings');
+  });
+});
+
+// ── Services ────────────────────────────────────────
+function getCategories() {
+  return [...new Set(services.map(s => s.category))].sort();
+}
+
+function getFilteredServices() {
+  const q = document.getElementById('searchInput').value.toLowerCase().trim();
+  const cat = document.getElementById('categoryFilter').value;
+  return services.filter(s => {
+    if (cat && s.category !== cat) return false;
+    if (!q) return true;
+    return (s.name + ' ' + s.category + ' ' + (s.notes || '')).toLowerCase().includes(q);
+  });
+}
+
+function renderCategoryFilters() {
+  const cats = getCategories();
+  const sel = document.getElementById('categoryFilter');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">All categories</option>' +
+    cats.map(c => `<option value="${esc(c)}"${c === cur ? ' selected' : ''}>${esc(c)}</option>`).join('');
+
+  const pills = document.getElementById('categoryPills');
+  pills.innerHTML = cats.map(c =>
+    `<button class="cat-pill text-[10px] font-medium px-2 py-1 rounded-md border border-slate-200 text-slate-600${c === cur ? ' on' : ''}" data-cat="${esc(c)}">${esc(c)}</button>`
+  ).join('');
+  pills.querySelectorAll('.cat-pill').forEach(p => {
+    p.addEventListener('click', () => {
+      const v = p.dataset.cat;
+      sel.value = sel.value === v ? '' : v;
+      renderCategoryFilters();
+      renderServices();
+    });
+  });
+}
+
+function numInput(id, field, val, cls = 'w-14') {
+  return `<input type="number" step="0.01" class="inp ${cls} px-1 py-1 text-right text-xs svc-field" data-id="${id}" data-field="${field}" value="${val}">`;
+}
+
+function renderServices() {
+  const filtered = getFilteredServices();
+  document.getElementById('serviceCount').textContent =
+    `${filtered.length} of ${services.length} services`;
+  document.getElementById('noResults').classList.toggle('hidden', filtered.length > 0);
+
+  const tbody = document.getElementById('servicesBody');
+  tbody.innerHTML = filtered.map(s => {
+    const dirty = dirtyRows.has(s.id);
+    return `<tr class="border-b border-slate-100 hover:bg-slate-50/50" data-row="${s.id}">
+      <td class="px-2 py-1.5 text-slate-400">${s.id}</td>
+      <td class="px-2 py-1.5">
+        <div class="font-medium text-slate-800 leading-tight">${esc(s.name)}</div>
+        ${s.notes ? `<div class="text-[10px] text-slate-400 mt-0.5">${esc(s.notes)}</div>` : ''}
+      </td>
+      <td class="px-2 py-1.5 text-slate-600">${esc(s.category)}</td>
+      <td class="px-2 py-1.5 text-slate-500 whitespace-nowrap">${esc(s.unit)}</td>
+      <td class="px-2 py-1.5">
+        <div class="flex gap-0.5 justify-end">${numInput(s.id, 'material_min', s.material_min)}${numInput(s.id, 'material_max', s.material_max)}</div>
+      </td>
+      <td class="px-2 py-1.5">
+        <div class="flex gap-0.5 justify-end">${numInput(s.id, 'labor_min', s.labor_min)}${numInput(s.id, 'labor_max', s.labor_max)}</div>
+      </td>
+      <td class="px-2 py-1.5">
+        <div class="flex gap-0.5 justify-end">${numInput(s.id, 'price_min', s.price_min, 'w-16')}${numInput(s.id, 'price_max', s.price_max, 'w-16')}</div>
+      </td>
+      <td class="px-2 py-1.5 text-center">
+        <label class="toggle inline-block">
+          <input type="checkbox" class="svc-toggle" data-id="${s.id}" ${s.enabled ? 'checked' : ''}>
+          <span class="slider"></span>
+        </label>
+      </td>
+      <td class="px-2 py-1.5 text-right">
+        <button class="save-row text-[10px] font-semibold px-2 py-1 rounded-md transition ${dirty ? 'bg-blue-600 text-white' : 'text-slate-300 cursor-default'}" data-id="${s.id}" ${dirty ? '' : 'disabled'}>Save</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  tbody.querySelectorAll('.svc-field').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const id = +inp.dataset.id;
+      dirtyRows.add(id);
+      inp.classList.add('dirty');
+      const btn = tbody.querySelector(`.save-row[data-id="${id}"]`);
+      if (btn) {
+        btn.disabled = false;
+        btn.className = 'save-row text-[10px] font-semibold px-2 py-1 rounded-md transition bg-blue-600 text-white';
+      }
+    });
+  });
+
+  tbody.querySelectorAll('.svc-toggle').forEach(tog => {
+    tog.addEventListener('change', async () => {
+      const id = +tog.dataset.id;
+      try {
+        const updated = await api(`/api/admin/services/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ enabled: tog.checked ? 1 : 0 }),
+        });
+        const idx = services.findIndex(s => s.id === id);
+        if (idx >= 0) services[idx] = updated;
+        toast(tog.checked ? 'Service enabled' : 'Service disabled');
+      } catch (e) {
+        tog.checked = !tog.checked;
+        toast(e.message, false);
+      }
+    });
+  });
+
+  tbody.querySelectorAll('.save-row').forEach(btn => {
+    btn.addEventListener('click', () => saveService(+btn.dataset.id));
+  });
+}
+
+async function saveService(id) {
+  const fields = ['material_min', 'material_max', 'labor_min', 'labor_max', 'price_min', 'price_max'];
+  const body = {};
+  document.querySelectorAll(`.svc-field[data-id="${id}"]`).forEach(inp => {
+    body[inp.dataset.field] = parseFloat(inp.value);
+  });
+
+  const orig = services.find(s => s.id === id);
+  const changed = {};
+  for (const f of fields) {
+    if (body[f] !== orig[f]) changed[f] = body[f];
+  }
+  if (!Object.keys(changed).length) {
+    dirtyRows.delete(id);
+    renderServices();
+    return;
+  }
+
+  try {
+    const updated = await api(`/api/admin/services/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(changed),
+    });
+    const idx = services.findIndex(s => s.id === id);
+    if (idx >= 0) services[idx] = updated;
+    dirtyRows.delete(id);
+    toast(`Saved: ${orig.name}`);
+    renderServices();
+  } catch (e) {
+    toast(e.message, false);
+  }
+}
+
+// ── Settings ────────────────────────────────────────
+async function loadSettings() {
+  try {
+    settings = await api('/api/admin/settings');
+    renderSettings();
+  } catch (e) {
+    toast('Failed to load settings: ' + e.message, false);
+  }
+}
+
+function renderSettings() {
+  const list = document.getElementById('settingsList');
+  list.innerHTML = settings.map(s => {
+    const dirty = dirtySettings.has(s.key);
+    return `<div class="px-3 py-3 flex flex-col sm:flex-row sm:items-center gap-2" data-setting="${esc(s.key)}">
+      <div class="flex-1 min-w-0">
+        <div class="text-sm font-medium text-slate-800">${esc(s.key)}</div>
+        <div class="text-[11px] text-slate-400">${esc(s.description || '')}</div>
+      </div>
+      <div class="flex items-center gap-2 sm:w-64">
+        <input type="text" class="inp flex-1 px-2 py-1.5 text-sm setting-field${dirty ? ' dirty' : ''}" data-key="${esc(s.key)}" value="${esc(s.value)}">
+        <button class="save-setting text-[10px] font-semibold px-2.5 py-1.5 rounded-md transition whitespace-nowrap ${dirty ? 'bg-blue-600 text-white' : 'text-slate-300 cursor-default'}" data-key="${esc(s.key)}" ${dirty ? '' : 'disabled'}>Save</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  list.querySelectorAll('.setting-field').forEach(inp => {
+    inp.addEventListener('input', () => {
+      dirtySettings.add(inp.dataset.key);
+      inp.classList.add('dirty');
+      const btn = list.querySelector(`.save-setting[data-key="${inp.dataset.key}"]`);
+      if (btn) {
+        btn.disabled = false;
+        btn.className = 'save-setting text-[10px] font-semibold px-2.5 py-1.5 rounded-md transition whitespace-nowrap bg-blue-600 text-white';
+      }
+    });
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter') saveSetting(inp.dataset.key);
+    });
+  });
+
+  list.querySelectorAll('.save-setting').forEach(btn => {
+    btn.addEventListener('click', () => saveSetting(btn.dataset.key));
+  });
+}
+
+async function saveSetting(key) {
+  const inp = document.querySelector(`.setting-field[data-key="${key}"]`);
+  if (!inp) return;
+  const orig = settings.find(s => s.key === key);
+  if (inp.value === orig.value) {
+    dirtySettings.delete(key);
+    renderSettings();
+    return;
+  }
+  try {
+    await api(`/api/admin/settings/${encodeURIComponent(key)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ value: inp.value }),
+    });
+    orig.value = inp.value;
+    dirtySettings.delete(key);
+    toast(`Setting saved: ${key}`);
+    renderSettings();
+  } catch (e) {
+    toast(e.message, false);
+  }
+}
+
+// ── Helpers ─────────────────────────────────────────
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// ── Events ──────────────────────────────────────────
+document.getElementById('loginBtn').addEventListener('click', async () => {
+  const pw = document.getElementById('loginPassword').value;
+  const err = document.getElementById('loginError');
+  err.classList.add('hidden');
+  if (!pw) { err.textContent = 'Enter password'; err.classList.remove('hidden'); return; }
+  document.getElementById('loginBtn').disabled = true;
+  try {
+    await tryLogin(pw);
+  } catch (e) {
+    clearPassword();
+    err.textContent = e.message === 'Session expired' ? 'Wrong password' : e.message;
+    err.classList.remove('hidden');
+  }
+  document.getElementById('loginBtn').disabled = false;
+});
+
+document.getElementById('loginPassword').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('loginBtn').click();
+});
+
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  clearPassword();
+  dirtyRows.clear();
+  dirtySettings.clear();
+  showLogin();
+  document.getElementById('loginPassword').value = '';
+});
+
+document.getElementById('searchInput').addEventListener('input', renderServices);
+document.getElementById('categoryFilter').addEventListener('change', () => {
+  renderCategoryFilters();
+  renderServices();
+});
+
+// ── Init ────────────────────────────────────────────
+(async () => {
+  const saved = getPassword();
+  if (saved) {
+    try {
+      await tryLogin(saved);
+    } catch {
+      showLogin();
+    }
+  } else {
+    showLogin();
+  }
+})();
+</script>
+</body>
+</html>

@@ -27,7 +27,7 @@ ALL AGENTS: Read this file. Confirm you are alive.
 - Frontend: `index.html` — ✅ working, hardware category added
 - Victor: Product logic and research docs — ✅ complete
 - Hardware pricing: ✅ updated (hinge, screens, locks, casement)
-- Admin panel: partial / in progress
+- Admin panel: `frontend/admin.html` — ✅ built (password, services table, settings)
 
 ---
 
@@ -40,7 +40,7 @@ ALL AGENTS: Read this file. Confirm you are alive.
 | SENYA | Hardware pricing + floor surcharge updates | `main` | ✅ Done |
 | SENYA | Beacon `activeagreement.md` for romi-estimate | `senya/accept-cursor-protocol` | ✅ Pushed |
 | COORDINATOR | **UI REDESIGN** — Redesign `frontend/index.html`: mobile-first 375px, professional look, clean sections, brand colors (blue #2563EB + white). Keep ALL JS logic intact. Only change HTML structure and Tailwind classes. Add company logo area. Fix visual hierarchy. | cursor/ui-redesign-v3 | **assigned** |
-| SOAP | **ADMIN PANEL** — Create `frontend/admin.html`: password login (fastglass2026), table of all 51 services with inline price editing, settings editor, search/filter. Use existing API: GET /api/admin/services?password=X, PUT /api/admin/services/{id}?password=X, GET/PUT /api/admin/settings. Tailwind CSS. | cursor/admin-panel | **assigned** |
+| COORDINATOR | **ADMIN PANEL** — `frontend/admin.html`: password login, 51 services inline edit, settings editor, search/filter | `cursor/admin-panel` | ✅ Done — PR open |
 | CLO | **STANDBY** — Wait for Phase 5 assignment. | — | **standby** |
 
 ---
