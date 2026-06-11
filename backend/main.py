@@ -60,6 +60,8 @@ class CalculateRequest(BaseModel):
     urgency: str = "normal"
     modifier_ids: Optional[List[int]] = []
     notes: str = ""
+    product_options: Optional[dict] = {}
+    options_add_sqft: float = 0.0  # pre-calculated surcharge from product options
 
 
 class UpdateServiceRequest(BaseModel):
@@ -211,6 +213,9 @@ def calculate_price(req: CalculateRequest):
     if width_inches <= 0 or height_inches <= 0:
         raise HTTPException(status_code=400, detail="Width and height must be greater than 0")
 
+    # Use pre-calculated surcharge from frontend
+    options_add_sqft = req.options_add_sqft or 0.0
+
     result = calculate(
         service_id=req.service_id,
         width_inches=width_inches,
@@ -222,6 +227,7 @@ def calculate_price(req: CalculateRequest):
         urgency=req.urgency,
         modifier_ids=req.modifier_ids or [],
         notes=req.notes,
+        options_add_sqft=options_add_sqft,
     )
 
     if "error" in result:

@@ -62,7 +62,8 @@ def calculate(
     num_technicians: int = 1,
     urgency: str = "normal",  # normal, urgent, emergency
     modifier_ids: list = None,
-    notes: str = ""
+    notes: str = "",
+    options_add_sqft: float = 0.0  # extra $/sqft from selected product options
 ) -> dict:
     """
     Main calculation function.
@@ -99,12 +100,12 @@ def calculate(
     effective_area_per_piece = max(area, 0.5)
     calc_area = effective_area_per_piece * quantity
 
-    # Use price_min/max directly from DB (real HCP-calibrated prices)
+    # Use price_min/max directly from DB + options surcharge
     # price_min/max are client-facing $/sqft already
-    # material is ~40%, labor is ~60% of total
-    total_rate_min = service["price_min"]
-    total_rate_max = service["price_max"]
+    total_rate_min = service["price_min"] + options_add_sqft
+    total_rate_max = service["price_max"] + options_add_sqft
 
+    # material ~40%, labor ~60%
     material_min = calc_area * total_rate_min * 0.40
     material_max = calc_area * total_rate_max * 0.40
 

@@ -252,7 +252,8 @@ function renderOpts(){
           const b=document.createElement('button');
           const on=opts[field.id]===o.value;
           const add=o.price_add_sqft||o.price_add_unit||o.price_add_lf||0;
-          const badge=add>0?` <span class="text-xs opacity-70">+$${add}</span>`:add<0?` <span class="text-xs opacity-70">-$${Math.abs(add)}</span>`:'';
+          const unit=o.price_add_sqft?'/sf':o.price_add_lf?'/lf':o.labor_add?'+labor':'';
+          const badge=add>0?` <span class="text-xs opacity-70">+$${add}${unit}</span>`:add<0?` <span class="text-xs opacity-70">-$${Math.abs(add)}${unit}</span>`:'';
           b.className=`opt-btn border-2 ${on?'border-blue-600 bg-blue-600 text-white':'border-gray-200 text-gray-700'} rounded-xl px-3 py-1.5 text-sm font-medium`;
           b.innerHTML=o.label+badge;
           b.onclick=()=>{opts[field.id]=o.value;renderOpts();sched();};
@@ -378,6 +379,8 @@ async function doCalc(){
     urgency:state.urgency,
     modifier_ids:[],
     notes:document.getElementById('notes').value,
+    // Calculate total options surcharge on frontend (we know the product fields)
+    options_add_sqft: calcOptionsSurcharge(),
   };
   try{
     const d=await fj('/api/calculate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -465,6 +468,18 @@ async function loadSim(cat,area){
     const mktLine = m2 ? `<div class="mt-2 pt-2 border-t border-amber-200 text-xs text-amber-600">📊 LA market avg: <strong>$${Math.round(area * m2.avg)}</strong> · range $${Math.round(area * m2.low)}–$${Math.round(area * m2.high)} for ${area} sqft</div>` : '';
     el.innerHTML=`<div class="bg-amber-50 border border-amber-200 rounded-2xl p-3"><div class="text-xs font-semibold text-amber-800 mb-2">📋 Similar past jobs (${jobs.length})</div><table class="w-full">${rows}</table>${mktLine}</div>`;
   }catch{}
+}
+
+function calcOptionsSurcharge(){
+  if(!prod?.fields) return 0;
+  let total=0;
+  prod.fields.forEach(field=>{
+    const val=opts[field.id];
+    if(!val||!field.options) return;
+    const opt=field.options.find(o=>o.value===val);
+    if(opt) total+=(opt.price_add_sqft||0);
+  });
+  return total;
 }
 
 function copyRes(){
