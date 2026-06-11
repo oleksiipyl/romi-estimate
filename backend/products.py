@@ -163,9 +163,9 @@ PRODUCTS = {
                 "default": "5/8",
                 "show_if": {"field": "grids", "value_not": "none"},
                 "options": [
-                    {"value": "5/8",  "label": "5/8\" (standard)", "price_add_unit": 0},
+                    {"value": "5/8",  "label": "5/8\" (standard)", "price_add_unit": 0,  "hide_if_grids": ["sculptured"]},
                     {"value": "3/4",  "label": "3/4\"",            "price_add_unit": 10},
-                    {"value": "1",    "label": "1\"",              "price_add_unit": 15},
+                    {"value": "1",    "label": "1\"",              "price_add_unit": 15, "hide_if_grids": ["flat", "sdl", "gbg"]},
                 ]
             },
             {

@@ -352,6 +352,18 @@ function renderOpts(){
       if(field.show_if.value && opts[field.show_if.field]!==field.show_if.value) return;
       if(field.show_if.value_not && opts[field.show_if.field]===field.show_if.value_not) return;
     }
+    // Filter options based on grid type (hide_if_grids)
+    const currentGridType = opts['grids'] || 'none';
+    if(field.options) {
+      field = {...field, options: field.options.filter(o => {
+        if(o.hide_if_grids && o.hide_if_grids.includes(currentGridType)) return false;
+        return true;
+      })};
+      // If current selection was filtered out, reset to first available
+      if(field.options.length && !field.options.find(o=>o.value===opts[field.id])) {
+        opts[field.id] = field.options[0].value;
+      }
+    }
     const sec=document.createElement('div');
     sec.className='bg-white rounded-2xl border border-gray-200 p-3';
     sec.innerHTML=`<div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">${field.label}${field.note?`<span class="text-gray-300 font-normal normal-case ml-1">${field.note}</span>`:''}</div><div id="f_${field.id}"></div>`;
