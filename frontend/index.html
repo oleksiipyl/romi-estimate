@@ -98,12 +98,7 @@
     <!-- Area preview -->
     <div class="mt-2.5 bg-blue-50 border border-blue-200 rounded-xl px-3 py-2 text-sm text-blue-700 font-medium" id="areaPreview">Area: —</div>
     <div id="minChargeNote" class="hidden mt-1.5 bg-amber-50 border border-amber-300 rounded-xl px-3 py-1.5 text-xs text-amber-700">⚠️ Minimum charge applies — small piece</div>
-    <!-- Qty -->
-    <div class="flex items-center gap-2 mt-2">
-      <span class="text-xs text-gray-500">Qty:</span>
-      <input id="qty" type="number" min="1" max="50" value="1"
-        class="w-16 text-center border border-gray-300 rounded-xl py-1.5 text-sm">
-    </div>
+    <!-- Qty removed — each piece counted separately -->
   </div>
 
   <!-- 5. LOCATION & JOB -->
@@ -296,7 +291,7 @@ function renderOpts(){
 
 // ── DIMS ──────────────────────────────────────────────
 function bindDims(){
-  ['wIn','wFrac','hIn','hFrac','qty'].forEach(id=>{
+  ['wIn','wFrac','hIn','hFrac'].forEach(id=>{
     document.getElementById(id).addEventListener('input',()=>{updArea();sched();});
     document.getElementById(id).addEventListener('change',()=>{updArea();sched();});
   });
@@ -305,7 +300,7 @@ function bindDims(){
 function updArea(){
   const w=parseFloat(document.getElementById('wIn').value||0)+FRAC[document.getElementById('wFrac').value];
   const h=parseFloat(document.getElementById('hIn').value||0)+FRAC[document.getElementById('hFrac').value];
-  const q=parseInt(document.getElementById('qty').value)||1;
+  const q=1;
   const note=document.getElementById('minChargeNote');
   if(w>0&&h>0){
     const sqft=w/12*h/12;
@@ -366,7 +361,7 @@ async function doCalc(){
     height_ft:0,
     height_in:parseInt(document.getElementById('hIn').value)||0,
     height_frac:document.getElementById('hFrac').value,
-    quantity:parseInt(document.getElementById('qty').value)||1,
+    quantity:1,
     zip_code:document.getElementById('zip').value||'91324',
     floor:state.floor,
     num_technicians:state.techs,
