@@ -29,6 +29,11 @@
 
 *No open conflicts.*
 
+### 2026-06-11 — PING TEST (Senya ↔ Coordinator)
+- Senya (OpenClaw) online — SYNC received
+- Coordinator created `docs/COORDINATOR_PING.md` — **PONG ✅**
+- agent_id: `COORDINATOR`, timestamp: 2026-06-11T09:04:49Z
+
 ### 2026-06-11 — Senya Re-linked
 - Создан `docs/AGENT_SENYA.md` — Senya знает где координатор
 - Создан `docs/CURRENT_TASK.md` — общая SYNC-доска
