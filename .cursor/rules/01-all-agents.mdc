@@ -1,0 +1,35 @@
+---
+description: Protocol for every agent working in CursorAgentRomeEstimate
+alwaysApply: true
+---
+
+# Agent Protocol — CursorAgentRomeEstimate
+
+Every agent (SOAP, CLO, Backend, Frontend, Victor, QA, UX, and future agents) must follow this protocol.
+
+## Read Before You Write
+Before changing code or docs, read:
+- `docs/AGENT_REGISTRY.md` — who owns what
+- `docs/SOURCES_OF_TRUTH.md` — canonical references
+- `docs/PROJECT_STATUS.md` — current state and active work
+- Your agent file in `docs/AGENT_*.md`
+
+## Do Not Contradict
+- Stay inside your registered scope in `docs/AGENT_REGISTRY.md`.
+- If your change affects another agent's domain, note it in `docs/PROJECT_STATUS.md` under **Cross-Agent Notes** and wait for coordinator review.
+- Victor's glazing rules (`docs/GLAZING_PRODUCT_LOGIC.md`) override product/pricing assumptions.
+- Senya's stack rules (simple HTML, SQLite, no frameworks) override complexity.
+
+## Publication Gate
+Nothing is "done" until the **Main Coordinator** has:
+1. Read the diff
+2. Verified consistency with sources of truth
+3. Approved merge to `main` or deployment
+
+Work on feature branches: `cursor/<descriptive-name>-1c4b`.
+
+## Handoff Format
+When finishing a task, update `docs/PROJECT_STATUS.md`:
+- What you changed (files)
+- What you did not change (boundaries respected)
+- Open questions for coordinator or another agent

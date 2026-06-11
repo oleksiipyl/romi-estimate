@@ -1,6 +1,8 @@
-# ROMI Estimate — Glass Price Calculator
+# Glass Estimate — Fast Glass & Windows
 
-> Simple web calculator for glass repair estimates.
+> **Agents:** Senya (`docs/AGENT_SENYA.md`) · Coordinator (`docs/COORDINATOR.md`) · Tasks (`docs/CURRENT_TASK.md`)
+
+Simple web calculator for glass repair estimates.
 > Open in browser → enter dimensions → get price range.
 > No AI required. Works from price database directly.
 
