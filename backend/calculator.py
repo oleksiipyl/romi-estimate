@@ -97,13 +97,18 @@ def calculate(
     # Minimum area check (min 2 sqft)
     calc_area = max(total_area, 2.0)
 
-    # Material cost (from DB × markup)
-    material_min = calc_area * service["material_min"] * material_markup
-    material_max = calc_area * service["material_max"] * material_markup
+    # Use price_min/max directly from DB (real HCP-calibrated prices)
+    # price_min/max are client-facing $/sqft already
+    # material is ~40%, labor is ~60% of total
+    total_rate_min = service["price_min"]
+    total_rate_max = service["price_max"]
 
-    # Labor cost
-    labor_min = calc_area * service["labor_min"]
-    labor_max = calc_area * service["labor_max"]
+    material_min = calc_area * total_rate_min * 0.40
+    material_max = calc_area * total_rate_max * 0.40
+
+    # Labor cost (60% of total)
+    labor_min = calc_area * total_rate_min * 0.60
+    labor_max = calc_area * total_rate_max * 0.60
 
     # ZIP multiplier and travel
     zip_data = get_zip_data(zip_code)
