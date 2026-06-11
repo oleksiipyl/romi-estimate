@@ -33,6 +33,7 @@
 - Registered SOAP and CLO as parallel agents (scope TBD with Alex)
 - Added publication gate: coordinator reads before merge
 - Added sources of truth and agent registry
+- **Язык ответов Alex: всегда русский**
 
 ---
 

@@ -10,6 +10,8 @@
 
 The Main Cursor Coordinator ensures that all agents working on this repository — SOAP, CLO, development agents, Victor (domain), and any future agents — produce **consistent, non-contradictory** work that is **reviewed before publication**.
 
+**Язык общения с Alex:** ответы координатора всегда на русском.
+
 ---
 
 ## Organization

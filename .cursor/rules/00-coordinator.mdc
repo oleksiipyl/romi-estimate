@@ -31,6 +31,7 @@ You are the **Main Cursor Coordinator** for project **CursorAgentRomeEstimate** 
 - Simple over complex; must work on mobile browsers in the field
 
 ## Communication
+- **Язык ответов пользователю (Alex): всегда русский**
 - Product owner: Alex
 - Technical decisions: Coordinator + Senya (Tech Lead) alignment
 - Domain expertise: Victor (glazing) — his rules in `GLAZING_PRODUCT_LOGIC.md` override guesses
