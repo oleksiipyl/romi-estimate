@@ -96,6 +96,7 @@
     </div>
     <!-- Area preview -->
     <div class="mt-2.5 bg-blue-50 border border-blue-200 rounded-xl px-3 py-2 text-sm text-blue-700 font-medium" id="areaPreview">Area: —</div>
+    <div id="minChargeNote" class="hidden mt-1.5 bg-amber-50 border border-amber-300 rounded-xl px-3 py-1.5 text-xs text-amber-700">⚠️ Minimum charge applies — small piece</div>
     <!-- Qty -->
     <div class="flex items-center gap-2 mt-2">
       <span class="text-xs text-gray-500">Qty:</span>
@@ -304,7 +305,10 @@ function updArea(){
   const w=parseFloat(document.getElementById('wIn').value||0)+FRAC[document.getElementById('wFrac').value];
   const h=parseFloat(document.getElementById('hIn').value||0)+FRAC[document.getElementById('hFrac').value];
   const q=parseInt(document.getElementById('qty').value)||1;
+  const note=document.getElementById('minChargeNote');
   if(w>0&&h>0){
+    const sqft=w/12*h/12;
+    if(note) note.classList.toggle('hidden', sqft >= 2.0);
     const a=(w/12*h/12*q).toFixed(2);
     const wF=document.getElementById('wFrac').value,hF=document.getElementById('hFrac').value;
     document.getElementById('areaPreview').textContent=

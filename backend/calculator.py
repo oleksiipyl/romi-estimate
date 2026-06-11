@@ -94,8 +94,10 @@ def calculate(
     area = inches_to_sqft(width_inches, height_inches)
     total_area = area * quantity
 
-    # Minimum area check (min 2 sqft)
-    calc_area = max(total_area, 2.0)
+    # Minimum area per PIECE is 0.5 sqft, but total scales with quantity
+    # For pricing: each piece has minimum 0.5 sqft (not entire job)
+    effective_area_per_piece = max(area, 0.5)
+    calc_area = effective_area_per_piece * quantity
 
     # Use price_min/max directly from DB (real HCP-calibrated prices)
     # price_min/max are client-facing $/sqft already
@@ -176,9 +178,11 @@ def calculate(
     total_min = base_min + travel_cost + floor_surcharge + extra_tech_cost + modifier_total
     total_max = base_max + travel_cost + floor_surcharge + extra_tech_cost + modifier_total
 
-    # Apply minimum
-    total_min = max(total_min, min_price)
-    total_max = max(total_max, min_price + 50)
+    # Apply minimum charge only for very small jobs (< 4 sqft total)
+    # Standard 24x36 = 6 sqft, should NOT trigger minimum
+    if calc_area < 4.0:
+        total_min = max(total_min, min_price)
+        total_max = max(total_max, min_price + 50)
 
     # Narrow the range: max should not be more than 60% above min
     # This prevents unrealistic $2000 spread
