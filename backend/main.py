@@ -260,6 +260,53 @@ def admin_update_setting(key: str, req: UpdateSettingRequest, password: str = ""
     return {"key": key, "value": req.value, "updated": True}
 
 
+@app.get("/api/similar-jobs")
+def get_similar_jobs(
+    category: str,
+    area_sqft: float,
+    tolerance: float = 0.4
+):
+    """Find similar past jobs from HCP history"""
+    import sqlite3 as sq
+    db_path = os.path.join(os.path.dirname(__file__), 'pricing_history.db')
+    if not os.path.exists(db_path):
+        return []
+    conn = sq.connect(db_path)
+    conn.row_factory = sq.Row
+    low = area_sqft * (1 - tolerance)
+    high = area_sqft * (1 + tolerance)
+    rows = conn.execute("""
+        SELECT invoice, description_en, area_sqft, price, price_per_sqft,
+               zip_code, date, features, hcp_job_id
+        FROM job_history
+        WHERE category = ?
+        AND area_sqft BETWEEN ? AND ?
+        AND status NOT IN ('pro canceled','user canceled')
+        ORDER BY ABS(area_sqft - ?) ASC
+        LIMIT 5
+    """, (category, low, high, area_sqft)).fetchall()
+    conn.close()
+    result = []
+    for r in rows:
+        feats = []
+        try:
+            feats = json.loads(r['features'] or '[]')
+        except:
+            pass
+        result.append({
+            'invoice': r['invoice'],
+            'description': r['description_en'],
+            'area_sqft': round(r['area_sqft'] or 0, 1),
+            'price': r['price'],
+            'price_per_sqft': round(r['price_per_sqft'] or 0, 1),
+            'zip_code': r['zip_code'],
+            'date': r['date'],
+            'features': feats,
+            'hcp_url': f"https://pro.housecallpro.com/pro/jobs/{r['hcp_job_id']}" if r['hcp_job_id'] else ''
+        })
+    return result
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

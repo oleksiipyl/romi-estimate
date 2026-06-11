@@ -158,6 +158,9 @@
     💰 Calculate Price
   </button>
 
+  <!-- SIMILAR JOBS -->
+  <div id="similarJobs"></div>
+
   <!-- RESULT -->
   <div id="result"></div>
   <div class="h-8"></div>
@@ -426,7 +429,21 @@ async function doCalculate() {
   try {
     const res = await fetch(`${API}/api/calculate`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
     if (!res.ok) throw new Error((await res.json()).detail);
-    showResult(await res.json(), currentProduct.label);
+    const result = await res.json();
+    showResult(result, currentProduct.label);
+    // Load similar jobs
+    const catMap = {
+      'residential_single': 'single_pane',
+      'residential_igu': 'double_pane_igu',
+      'residential_foggy': 'double_pane_igu',
+      'commercial_storefront': 'commercial_storefront',
+      'shower_door': 'shower_door',
+      'shower_mirror': 'mirror',
+      'specialty_tabletop': 'custom_tempered',
+      'specialty_laminated': 'laminated',
+    };
+    const hcpCat = catMap[currentProduct.id] || 'single_pane';
+    await loadSimilarJobs(hcpCat, result.total_area_sqft);
   } catch(e) {
     document.getElementById('result').innerHTML = `<div class="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm">❌ ${e.message}</div>`;
   }
@@ -467,6 +484,32 @@ function showResult(d, label) {
     </div>`;
   window._lastResult = d;
   window._lastLabel = label;
+}
+
+async function loadSimilarJobs(category, area) {
+  const el = document.getElementById('similarJobs');
+  if (!category || !area || area < 0.5) { el.innerHTML=''; return; }
+  try {
+    const res = await fetch(`${API}/api/similar-jobs?category=${category}&area_sqft=${area}`);
+    const jobs = await res.json();
+    if (!jobs.length) { el.innerHTML=''; return; }
+    let rows = jobs.map(j => {
+      const feats = (j.features||[]).join(', ');
+      return `<tr class="border-b border-gray-100 last:border-0">
+        <td class="py-2 pr-3 text-sm text-gray-600 font-medium">#${j.invoice}</td>
+        <td class="py-2 pr-3 text-sm text-gray-500">${j.area_sqft} sqft</td>
+        <td class="py-2 pr-3 text-sm font-semibold text-blue-700">$${j.price.toLocaleString()}</td>
+        <td class="py-2 pr-3 text-xs text-gray-400">${j.price_per_sqft}/sqft</td>
+        <td class="py-2 text-xs text-gray-400">${j.zip_code||''} ${j.date||''}</td>
+      </tr>
+      <tr><td colspan="5" class="pb-2 text-xs text-gray-400">${j.description.substring(0,80)}${feats?' | '+feats:''}</td></tr>`;
+    }).join('');
+    el.innerHTML = `
+      <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+        <h3 class="font-semibold text-amber-800 mb-2 text-sm">📋 Similar past jobs (${jobs.length} found)</h3>
+        <table class="w-full">${rows}</table>
+      </div>`;
+  } catch(e) { el.innerHTML=''; }
 }
 
 function copyResult() {
