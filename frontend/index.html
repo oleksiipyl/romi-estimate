@@ -1,522 +1,982 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <title>Glass Estimator — Fast Glass & Windows</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>ROMI Estimate — Glass Price Calculator</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: '#2563EB',
+            'brand-light': '#EFF6FF',
+            'brand-border': '#BFDBFE',
+          }
+        }
+      }
+    }
+  </script>
   <style>
-    * { -webkit-tap-highlight-color: transparent; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    /* Mobile-first base */
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: #F9FAFB; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
 
-    /* Category pills */
-    .cat-pill { transition: all .15s; cursor: pointer; min-height: 44px; }
-    .cat-pill.on { background: #2563EB; color: #fff; border-color: #2563EB; }
+    /* Pill scrollable row — hide scrollbar */
+    .pills-row { display: flex; flex-direction: row; gap: 8px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .pills-row::-webkit-scrollbar { display: none; }
 
-    /* Product cards */
-    .prod-card { transition: all .15s; cursor: pointer; min-height: 56px; }
-    .prod-card.on { border-color: #2563EB; background: #EFF6FF; color: #1D4ED8; }
+    /* Pill button */
+    .pill {
+      display: inline-flex; align-items: center; justify-content: center;
+      height: 36px; padding: 0 14px; border-radius: 999px; cursor: pointer;
+      font-size: 14px; font-weight: 500; white-space: nowrap; border: 1.5px solid transparent;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      background: #F3F4F6; color: #374151; user-select: none;
+    }
+    .pill.selected { background: #2563EB; color: white; border-color: #2563EB; }
+    .pill:hover:not(.selected) { background: #E5E7EB; }
 
-    /* Option pills */
-    .opt-pill { transition: all .15s; cursor: pointer; min-height: 40px; white-space: nowrap; }
-    .opt-pill.on { background: #2563EB; color: #fff; border-color: #2563EB; }
+    /* Smaller pill for options */
+    .pill-sm { height: 34px; padding: 0 12px; font-size: 13px; }
 
-    /* Floor / urgency buttons */
-    .choice-btn { transition: all .15s; cursor: pointer; min-height: 40px; }
-    .choice-btn.on { background: #2563EB; color: #fff; border-color: #2563EB; }
+    /* Product card */
+    .product-card {
+      position: relative; height: 72px; border: 1.5px solid #E5E7EB;
+      border-radius: 12px; background: white; cursor: pointer;
+      display: flex; align-items: center; padding: 0 12px;
+      transition: border-color 0.15s, background 0.15s;
+      overflow: hidden;
+    }
+    .product-card.selected { border-color: #2563EB; background: #EFF6FF; }
+    .product-card:hover:not(.selected) { border-color: #93C5FD; }
+    .product-card .radio-dot {
+      position: absolute; top: 8px; right: 8px;
+      width: 16px; height: 16px; border-radius: 50%;
+      border: 2px solid #D1D5DB; background: white;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .product-card.selected .radio-dot { border-color: #2563EB; background: #2563EB; }
+    .product-card.selected .radio-dot::after {
+      content: ''; display: block; width: 6px; height: 6px;
+      border-radius: 50%; background: white;
+      margin: 3px auto;
+    }
 
-    /* Result animation */
-    .result-in { animation: slideIn .25s ease; }
-    @keyframes slideIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+    /* Dimension inputs */
+    .dim-input {
+      width: 52px; text-align: center; border: 1.5px solid #D1D5DB;
+      border-radius: 8px; padding: 6px 4px; font-size: 14px;
+      background: white; outline: none; transition: border-color 0.15s;
+    }
+    .dim-input:focus { border-color: #2563EB; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+
+    /* Select dropdown */
+    .dim-select {
+      border: 1.5px solid #D1D5DB; border-radius: 8px;
+      padding: 6px 8px; font-size: 13px; background: white;
+      outline: none; cursor: pointer; transition: border-color 0.15s;
+    }
+    .dim-select:focus { border-color: #2563EB; }
+    .full-select {
+      width: 100%; height: 44px; border: 1.5px solid #D1D5DB;
+      border-radius: 8px; padding: 0 12px; font-size: 14px;
+      background: white; outline: none; cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .full-select:focus { border-color: #2563EB; }
+
+    /* Floor/tech/urgency buttons */
+    .seg-btn {
+      flex: 1; height: 44px; border: 1.5px solid #E5E7EB;
+      background: white; border-radius: 8px; cursor: pointer;
+      font-size: 13px; color: #374151; font-weight: 500;
+      transition: all 0.15s; text-align: center; display: flex;
+      align-items: center; justify-content: center;
+    }
+    .seg-btn.selected { border-color: #2563EB; background: #EFF6FF; color: #2563EB; }
+    .seg-btn:hover:not(.selected) { border-color: #93C5FD; background: #F8FAFF; }
+
+    /* Square tech btn */
+    .sq-btn {
+      width: 44px; height: 44px; border: 1.5px solid #E5E7EB;
+      background: white; border-radius: 8px; cursor: pointer;
+      font-size: 15px; font-weight: 600; color: #374151;
+      transition: all 0.15s; display: flex; align-items: center; justify-content: center;
+    }
+    .sq-btn.selected { border-color: #2563EB; background: #EFF6FF; color: #2563EB; }
+    .sq-btn:hover:not(.selected) { border-color: #93C5FD; }
+
+    /* Urgency stacked */
+    .urgency-btn {
+      width: 100%; height: 44px; border: 1.5px solid #E5E7EB;
+      background: white; border-radius: 8px; cursor: pointer;
+      font-size: 13px; font-weight: 500; color: #374151;
+      transition: all 0.15s; text-align: center; display: flex;
+      align-items: center; justify-content: center;
+    }
+    .urgency-btn.selected { border-color: #2563EB; background: #EFF6FF; color: #2563EB; }
+    .urgency-btn:hover:not(.selected) { border-color: #93C5FD; background: #F8FAFF; }
 
     /* Section card */
-    .card { background: #fff; border: 1px solid #E5E7EB; border-radius: 16px; padding: 16px; }
+    .section-card {
+      background: white; border-radius: 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04);
+      padding: 16px; margin-bottom: 12px;
+    }
+    .section-label {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: #6B7280; margin-bottom: 12px;
+    }
 
-    /* Compact input */
-    input[type=number] { -moz-appearance: textfield; }
-    input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+    /* Area preview */
+    .area-preview {
+      background: #F0F9FF; border: 1.5px solid #BAE6FD;
+      height: 44px; border-radius: 8px; padding: 0 12px;
+      display: flex; align-items: center; font-size: 13px;
+      color: #0369A1; font-weight: 500;
+    }
+
+    /* Result section */
+    .result-section {
+      background: white; border-radius: 16px;
+      box-shadow: 0 2px 8px rgba(37,99,235,0.12), 0 0 0 1px rgba(37,99,235,0.08);
+      padding: 20px; margin-bottom: 12px;
+    }
+
+    /* Breakdown row */
+    .breakdown-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; border-bottom: 1px solid #E5E7EB; }
+    .breakdown-row:last-child { border-bottom: none; font-weight: 700; font-size: 14px; }
+
+    /* Spinner */
+    .spinner {
+      display: inline-block; width: 18px; height: 18px;
+      border: 2px solid #E5E7EB; border-top-color: #2563EB;
+      border-radius: 50%; animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Fade-in */
+    .fade-in { animation: fadeIn 0.25s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ZIP badge */
+    .zip-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: #ECFDF5; border: 1px solid #6EE7B7;
+      border-radius: 999px; padding: 2px 10px;
+      font-size: 12px; color: #065F46; font-weight: 500;
+    }
+
+    /* Scrollbar for textarea */
+    textarea { resize: none; }
   </style>
 </head>
-<body class="bg-gray-50 min-h-screen pb-10">
+<body>
 
-<!-- HEADER -->
-<header class="bg-white border-b border-gray-100 sticky top-0 z-20">
-  <div class="max-w-xl mx-auto px-4 py-3 flex justify-between items-center">
-    <div>
-      <div class="font-bold text-gray-900 text-base leading-tight">🪟 Glass Estimator</div>
-      <div class="text-xs text-gray-400">Fast Glass & Windows</div>
+<!-- STICKY HEADER -->
+<header class="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
+  <div class="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <span class="text-xl">🪟</span>
+      <div>
+        <div class="font-bold text-gray-900 text-sm leading-tight">ROMI Estimate</div>
+        <div class="text-xs text-gray-400 leading-tight">Glass Price Calculator</div>
+      </div>
     </div>
-    <a href="/admin" class="text-xs text-gray-400 px-2 py-1 rounded hover:bg-gray-50">⚙️</a>
+    <div id="calc-status" class="text-xs text-gray-400">Ready</div>
   </div>
 </header>
 
-<main class="max-w-xl mx-auto px-3 pt-4 space-y-3" id="main">
+<!-- MAIN CONTENT -->
+<main class="max-w-lg mx-auto px-4 py-4 pb-12">
 
-  <!-- 1. CATEGORY -->
-  <div class="card">
-    <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">What needs to be done?</div>
-    <div class="grid grid-cols-2 gap-2" id="catGrid"></div>
+  <!-- STEP 1: CATEGORY -->
+  <div class="section-card">
+    <div class="section-label">What needs to be done?</div>
+    <div class="pills-row" id="category-pills">
+      <button class="pill selected" data-cat="residential">🏠 Residential</button>
+      <button class="pill" data-cat="commercial">🏢 Commercial</button>
+      <button class="pill" data-cat="shower">🚿 Shower &amp; Bath</button>
+      <button class="pill" data-cat="specialty">✨ Specialty</button>
+    </div>
   </div>
 
-  <!-- 2. PRODUCT TYPE -->
-  <div class="card" id="prodSection" style="display:none">
-    <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Select type</div>
-    <div class="grid grid-cols-2 gap-2" id="prodGrid"></div>
+  <!-- STEP 2: PRODUCT -->
+  <div class="section-card">
+    <div class="section-label">Select Type</div>
+    <div id="product-grid" class="grid grid-cols-2 gap-[10px]">
+      <!-- Populated by JS -->
+    </div>
+    <div id="product-loading" class="flex justify-center py-4">
+      <div class="spinner"></div>
+    </div>
   </div>
 
-  <!-- 3. PRODUCT OPTIONS -->
-  <div id="optionsArea"></div>
+  <!-- STEP 3: OPTIONS (hidden until product selected) -->
+  <div class="section-card fade-in" id="options-section" style="display:none">
+    <div class="section-label">Options</div>
+    <div id="options-fields">
+      <!-- Populated by JS -->
+    </div>
+  </div>
 
-  <!-- 4. DIMENSIONS -->
-  <div class="card" id="dimSection" style="display:none">
-    <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Dimensions & Quantity</div>
-    <div class="grid grid-cols-2 gap-3 mb-3">
-      <!-- Width -->
+  <!-- STEP 4: DIMENSIONS -->
+  <div class="section-card">
+    <div class="section-label">Dimensions</div>
+    <div class="grid grid-cols-2 gap-4">
+      <!-- WIDTH -->
       <div>
-        <label class="text-xs text-gray-500 mb-1 block">Width</label>
-        <div class="flex items-center gap-1 mb-1">
-          <input id="wFt" type="number" min="0" max="30" value="0"
-            class="w-12 text-center border border-gray-300 rounded-lg py-2 text-sm font-medium">
-          <span class="text-xs text-gray-400">ft</span>
-          <input id="wIn" type="number" min="0" max="11" value="24"
-            class="w-12 text-center border border-gray-300 rounded-lg py-2 text-sm font-medium">
-          <span class="text-xs text-gray-400">in</span>
+        <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">Width</div>
+        <div class="flex items-center gap-1 mb-2">
+          <input class="dim-input" type="number" id="width-ft" placeholder="ft" min="0" max="99" value="2" />
+          <span class="text-gray-400 text-sm">ft</span>
+          <input class="dim-input" type="number" id="width-in" placeholder="in" min="0" max="11" value="0" />
+          <span class="text-gray-400 text-sm">in</span>
         </div>
-        <select id="wFrac" class="w-full border border-gray-300 rounded-lg px-2 py-2 text-sm">
-          <option value="0">+ 0"</option><option value="1/8">+ ⅛"</option>
-          <option value="1/4">+ ¼"</option><option value="3/8">+ ⅜"</option>
-          <option value="1/2" selected>+ ½"</option><option value="5/8">+ ⅝"</option>
-          <option value="3/4">+ ¾"</option><option value="7/8">+ ⅞"</option>
+        <select class="dim-select w-full" id="width-frac">
+          <option value="0">+ 0″</option>
+          <option value="1/8">+ 1/8″</option>
+          <option value="1/4">+ 1/4″</option>
+          <option value="3/8">+ 3/8″</option>
+          <option value="1/2">+ 1/2″</option>
+          <option value="5/8">+ 5/8″</option>
+          <option value="3/4">+ 3/4″</option>
+          <option value="7/8">+ 7/8″</option>
         </select>
       </div>
-      <!-- Height -->
+      <!-- HEIGHT -->
       <div>
-        <label class="text-xs text-gray-500 mb-1 block">Height</label>
-        <div class="flex items-center gap-1 mb-1">
-          <input id="hFt" type="number" min="0" max="30" value="0"
-            class="w-12 text-center border border-gray-300 rounded-lg py-2 text-sm font-medium">
-          <span class="text-xs text-gray-400">ft</span>
-          <input id="hIn" type="number" min="0" max="11" value="36"
-            class="w-12 text-center border border-gray-300 rounded-lg py-2 text-sm font-medium">
-          <span class="text-xs text-gray-400">in</span>
+        <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">Height</div>
+        <div class="flex items-center gap-1 mb-2">
+          <input class="dim-input" type="number" id="height-ft" placeholder="ft" min="0" max="99" value="3" />
+          <span class="text-gray-400 text-sm">ft</span>
+          <input class="dim-input" type="number" id="height-in" placeholder="in" min="0" max="11" value="0" />
+          <span class="text-gray-400 text-sm">in</span>
         </div>
-        <select id="hFrac" class="w-full border border-gray-300 rounded-lg px-2 py-2 text-sm">
-          <option value="0" selected>+ 0"</option><option value="1/8">+ ⅛"</option>
-          <option value="1/4">+ ¼"</option><option value="3/8">+ ⅜"</option>
-          <option value="1/2">+ ½"</option><option value="5/8">+ ⅝"</option>
-          <option value="3/4">+ ¾"</option><option value="7/8">+ ⅞"</option>
+        <select class="dim-select w-full" id="height-frac">
+          <option value="0">+ 0″</option>
+          <option value="1/8">+ 1/8″</option>
+          <option value="1/4">+ 1/4″</option>
+          <option value="3/8">+ 3/8″</option>
+          <option value="1/2">+ 1/2″</option>
+          <option value="5/8">+ 5/8″</option>
+          <option value="3/4">+ 3/4″</option>
+          <option value="7/8">+ 7/8″</option>
         </select>
       </div>
     </div>
-    <!-- Area + Qty -->
-    <div class="flex items-center gap-3">
-      <div class="flex-1 bg-blue-50 rounded-lg px-3 py-2 text-sm text-blue-700 font-medium" id="areaPreview">Area: —</div>
+
+    <!-- LIVE AREA PREVIEW -->
+    <div class="area-preview mt-4" id="area-preview">
+      📐 Area: — sq ft
+    </div>
+
+    <!-- QUANTITY -->
+    <div class="flex items-center gap-3 mt-3">
+      <span class="text-sm text-gray-600 font-medium">Qty:</span>
       <div class="flex items-center gap-2">
-        <span class="text-xs text-gray-500">Qty</span>
-        <input id="qty" type="number" min="1" max="50" value="1"
-          class="w-14 text-center border border-gray-300 rounded-lg py-2 text-sm font-medium">
+        <button class="w-8 h-8 rounded-lg border border-gray-200 bg-white text-gray-600 font-bold flex items-center justify-center hover:bg-gray-50 transition" id="qty-minus">−</button>
+        <span class="text-sm font-semibold text-gray-800 w-6 text-center" id="qty-display">1</span>
+        <button class="w-8 h-8 rounded-lg border border-gray-200 bg-white text-gray-600 font-bold flex items-center justify-center hover:bg-gray-50 transition" id="qty-plus">+</button>
       </div>
     </div>
   </div>
 
-  <!-- 5. LOCATION & JOB -->
-  <div class="card" id="jobSection" style="display:none">
-    <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Location & Job Details</div>
+  <!-- STEP 5: LOCATION & JOB -->
+  <div class="section-card">
+    <div class="section-label">Location &amp; Job Details</div>
 
     <!-- ZIP -->
-    <div class="mb-3">
-      <div class="flex gap-2 items-center">
-        <input id="zip" type="text" placeholder="ZIP Code (e.g. 90210)" maxlength="5"
-          class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"
-          oninput="onZipInput(this.value)">
-        <div id="zipBadge" class="text-xs text-gray-500 whitespace-nowrap"></div>
+    <div class="mb-4">
+      <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">ZIP Code</div>
+      <div class="flex items-center gap-2">
+        <input
+          type="text" id="zip-input" maxlength="5"
+          placeholder="90210"
+          class="dim-select text-base font-mono w-24"
+          style="height:44px; font-size:15px; letter-spacing:0.05em;"
+        />
+        <div id="zip-badge" class="zip-badge" style="display:none"></div>
+        <div id="zip-loading" style="display:none"><div class="spinner" style="width:14px;height:14px;"></div></div>
       </div>
     </div>
 
-    <!-- Floor -->
-    <div class="mb-3">
-      <div class="text-xs text-gray-500 mb-1">Floor</div>
-      <div class="flex gap-2">
-        <button onclick="setChoice('floor',1,this)" class="choice-btn on flex-1 border-2 border-blue-600 bg-blue-600 text-white rounded-xl py-2 text-sm font-medium">1st</button>
-        <button onclick="setChoice('floor',2,this)" class="choice-btn flex-1 border-2 border-gray-200 text-gray-700 rounded-xl py-2 text-sm font-medium">2nd<br><span class="text-xs opacity-70">+$150</span></button>
-        <button onclick="setChoice('floor',3,this)" class="choice-btn flex-1 border-2 border-gray-200 text-gray-700 rounded-xl py-2 text-sm font-medium">3rd+<br><span class="text-xs opacity-70">+$300</span></button>
+    <!-- FLOOR -->
+    <div class="mb-4">
+      <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">Floor</div>
+      <div class="flex gap-2" id="floor-btns">
+        <button class="seg-btn selected" data-floor="1">1st</button>
+        <button class="seg-btn" data-floor="2">2nd<br/><span class="text-[10px] font-normal">+$150</span></button>
+        <button class="seg-btn" data-floor="3">3rd+<br/><span class="text-[10px] font-normal">+$300</span></button>
       </div>
     </div>
 
-    <!-- Techs -->
-    <div class="mb-3">
-      <div class="text-xs text-gray-500 mb-1">Technicians</div>
-      <div class="flex gap-2">
-        <button onclick="setChoice('techs',1,this)" class="choice-btn on w-14 border-2 border-blue-600 bg-blue-600 text-white rounded-xl py-2 text-sm font-bold">1</button>
-        <button onclick="setChoice('techs',2,this)" class="choice-btn w-14 border-2 border-gray-200 text-gray-700 rounded-xl py-2 text-sm font-bold">2</button>
-        <button onclick="setChoice('techs',3,this)" class="choice-btn w-14 border-2 border-gray-200 text-gray-700 rounded-xl py-2 text-sm font-bold">3</button>
+    <!-- TECHNICIANS -->
+    <div class="mb-4">
+      <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">Technicians</div>
+      <div class="flex gap-2" id="tech-btns">
+        <button class="sq-btn selected" data-tech="1">1</button>
+        <button class="sq-btn" data-tech="2">2</button>
+        <button class="sq-btn" data-tech="3">3</button>
       </div>
     </div>
 
-    <!-- Urgency -->
-    <div class="mb-3">
-      <div class="text-xs text-gray-500 mb-1">Urgency</div>
-      <div class="flex flex-col gap-1.5">
-        <button onclick="setChoice('urgency','normal',this)" class="choice-btn on text-left border-2 border-blue-600 bg-blue-600 text-white rounded-xl px-3 py-2 text-sm font-medium">Standard (3–5 days)</button>
-        <button onclick="setChoice('urgency','urgent',this)" class="choice-btn text-left border-2 border-gray-200 text-gray-700 rounded-xl px-3 py-2 text-sm font-medium">Same-Day <span class="font-bold text-orange-500">+30%</span></button>
-        <button onclick="setChoice('urgency','emergency',this)" class="choice-btn text-left border-2 border-gray-200 text-gray-700 rounded-xl px-3 py-2 text-sm font-medium">Emergency / After Hours <span class="font-bold text-red-500">+50%</span></button>
+    <!-- URGENCY -->
+    <div class="mb-4">
+      <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">Urgency</div>
+      <div class="flex flex-col gap-2" id="urgency-btns">
+        <button class="urgency-btn selected" data-urgency="standard">Standard</button>
+        <button class="urgency-btn" data-urgency="same_day">Same-Day &nbsp;<span class="text-[11px] font-normal text-gray-400">+30%</span></button>
+        <button class="urgency-btn" data-urgency="emergency">Emergency &nbsp;<span class="text-[11px] font-normal text-gray-400">+50%</span></button>
       </div>
     </div>
 
-    <!-- Notes -->
+    <!-- NOTES -->
     <div>
-      <textarea id="notes" rows="2" placeholder="Notes: outside patio, ladder needed, Beverly Hills estate..."
-        class="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm resize-none text-gray-700"
-        oninput="schedulCalc()"></textarea>
+      <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">Notes</div>
+      <textarea
+        id="notes-input" rows="2"
+        placeholder="Any special instructions, access details, etc."
+        class="w-full border border-gray-200 rounded-xl p-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition"
+      ></textarea>
     </div>
   </div>
 
-  <!-- RESULT -->
-  <div id="resultArea"></div>
+  <!-- RESULT SECTION (hidden until calc) -->
+  <div id="result-section" class="result-section fade-in" style="display:none">
+    <div class="flex items-start justify-between mb-1">
+      <div>
+        <div id="result-price" class="text-[32px] font-bold text-blue-600 leading-tight"></div>
+        <div id="result-tax-note" class="text-xs text-gray-400 mt-0.5">includes LA tax 10.25%</div>
+      </div>
+      <div id="result-spinner" style="display:none"><div class="spinner"></div></div>
+    </div>
 
-  <!-- SIMILAR JOBS -->
-  <div id="similarArea"></div>
+    <!-- BREAKDOWN TABLE -->
+    <div class="bg-gray-50 rounded-xl p-3 mt-4" id="breakdown-table">
+      <!-- Populated by JS -->
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="flex gap-3 mt-4">
+      <button id="copy-btn" class="flex-1 h-11 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 active:bg-blue-800 transition flex items-center justify-center gap-2">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copy
+      </button>
+      <button id="print-btn" class="flex-1 h-11 border-2 border-blue-600 text-blue-600 rounded-xl font-semibold text-sm hover:bg-blue-50 active:bg-blue-100 transition flex items-center justify-center gap-2">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Print
+      </button>
+    </div>
+  </div>
+
+  <!-- SIMILAR JOBS (hidden until calc) -->
+  <div id="similar-section" style="display:none"
+    class="fade-in rounded-xl p-3 mb-4 border border-amber-300"
+    style="background:#FFFBEB; border-color:#FCD34D;">
+    <div class="font-semibold text-sm text-amber-800 mb-2">📋 Similar past jobs</div>
+    <div id="similar-table" class="text-xs text-amber-900">
+      <!-- Populated by JS -->
+    </div>
+  </div>
 
 </main>
 
 <script>
-const API = '';
-const SVC = {residential_single:1,residential_igu:2,residential_foggy:13,commercial_storefront:17,commercial_partition:19,commercial_door:23,shower_door:49,shower_mirror:50,specialty_tabletop:50,specialty_custom:3,specialty_laminated:6};
-const HCP = {residential_single:'single_pane',residential_igu:'double_pane_igu',residential_foggy:'double_pane_igu',commercial_storefront:'commercial_storefront',shower_door:'shower_door',shower_mirror:'mirror',specialty_tabletop:'custom_tempered',specialty_laminated:'laminated'};
-const FRAC = {'0':0,'1/8':.125,'1/4':.25,'3/8':.375,'1/2':.5,'5/8':.625,'3/4':.75,'7/8':.875};
+// ─── CONSTANTS ───────────────────────────────────────────────────────────────
+const SVC = {
+  residential_single: 1, residential_igu: 2, residential_foggy: 13,
+  commercial_storefront: 17, commercial_partition: 19, commercial_door: 23,
+  shower_door: 49, shower_mirror: 50,
+  specialty_tabletop: 50, specialty_custom: 3, specialty_laminated: 6
+};
+const HCP = {
+  residential_single: 'single_pane', residential_igu: 'double_pane_igu',
+  residential_foggy: 'double_pane_igu', commercial_storefront: 'commercial_storefront',
+  shower_door: 'shower_door', shower_mirror: 'mirror',
+  specialty_tabletop: 'custom_tempered', specialty_laminated: 'laminated'
+};
+const FRAC = { '0': 0, '1/8': .125, '1/4': .25, '3/8': .375, '1/2': .5, '5/8': .625, '3/4': .75, '7/8': .875 };
 
-let allCats = [];
-let curProduct = null;
-let curOpts = {};
-let state = { floor:1, techs:1, urgency:'normal' };
-let calcTimer = null;
+const CAT_MAP = {
+  residential: ['residential_single', 'residential_igu', 'residential_foggy'],
+  commercial: ['commercial_storefront', 'commercial_partition', 'commercial_door'],
+  shower: ['shower_door', 'shower_mirror'],
+  specialty: ['specialty_tabletop', 'specialty_custom', 'specialty_laminated']
+};
 
-// ── INIT ──────────────────────────────────────────────────────
-async function init() {
-  try {
-    allCats = await fetchJSON('/api/products');
-    renderCats();
-    bindDimInputs();
-  } catch(e) {
-    document.getElementById('catGrid').innerHTML =
-      '<div class="col-span-2 text-red-500 text-sm p-2">Server offline. Run: cd backend && python3 -m uvicorn main:app --port 8001</div>';
-  }
+const PRODUCT_LABELS = {
+  residential_single: { label: 'Single Pane', desc: 'Standard single pane window' },
+  residential_igu: { label: 'Double Pane IGU', desc: 'Insulated glass unit' },
+  residential_foggy: { label: 'Foggy / Seal Failure', desc: 'IGU fog replacement' },
+  commercial_storefront: { label: 'Storefront Glass', desc: 'Commercial facade glass' },
+  commercial_partition: { label: 'Glass Partition', desc: 'Office partition' },
+  commercial_door: { label: 'Glass Door', desc: 'Entry or interior door' },
+  shower_door: { label: 'Shower Door', desc: 'Frameless / framed door' },
+  shower_mirror: { label: 'Mirror', desc: 'Bathroom or vanity mirror' },
+  specialty_tabletop: { label: 'Table Top', desc: 'Custom tempered tabletop' },
+  specialty_custom: { label: 'Custom Cut', desc: 'Any custom shape' },
+  specialty_laminated: { label: 'Laminated Glass', desc: 'Safety / hurricane' }
+};
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+const state = {
+  category: 'residential',
+  productKey: null,
+  serviceId: null,
+  optionFields: [],
+  selectedModifiers: [],
+  widthFt: 2, widthIn: 0, widthFrac: '0',
+  heightFt: 3, heightIn: 0, heightFrac: '0',
+  quantity: 1,
+  zipCode: '',
+  zipData: null,
+  floor: 1,
+  numTechs: 1,
+  urgency: 'standard',
+  notes: '',
+  calcResult: null,
+  calcTimer: null,
+  zipTimer: null
+};
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function fmt(n) { return n != null ? '$' + Math.round(n).toLocaleString() : '—'; }
+function fmtRange(min, max) {
+  if (min == null || max == null) return '—';
+  return '$' + Math.round(min).toLocaleString() + ' – $' + Math.round(max).toLocaleString();
+}
+function calcAreaSqft() {
+  const wIn = (state.widthFt * 12) + state.widthIn + (FRAC[state.widthFrac] || 0);
+  const hIn = (state.heightFt * 12) + state.heightIn + (FRAC[state.heightFrac] || 0);
+  return (wIn / 12) * (hIn / 12);
+}
+function dimLabel() {
+  const wIn = (state.widthFt * 12) + state.widthIn + (FRAC[state.widthFrac] || 0);
+  const hIn = (state.heightFt * 12) + state.heightIn + (FRAC[state.heightFrac] || 0);
+  return Math.round(wIn) + '″ × ' + Math.round(hIn) + '″';
 }
 
-async function fetchJSON(path, opts={}) {
-  const r = await fetch(API + path, opts);
-  if (!r.ok) { const e = await r.json(); throw new Error(e.detail || r.status); }
-  return r.json();
-}
-
-// ── CATEGORIES ────────────────────────────────────────────────
-function renderCats() {
-  const g = document.getElementById('catGrid');
-  g.innerHTML = '';
-  allCats.forEach(cat => {
-    const b = document.createElement('button');
-    b.className = 'cat-pill border-2 border-gray-200 rounded-2xl px-3 py-2.5 text-left';
-    const emoji = cat.category_label.split(' ')[0];
-    const label = cat.category_label.slice(emoji.length).trim();
-    b.innerHTML = `<div class="text-xl leading-none mb-0.5">${emoji}</div><div class="text-sm font-semibold text-gray-800 leading-tight">${label}</div><div class="text-xs text-gray-400">${cat.products.length} types</div>`;
-    b.onclick = () => selectCat(cat, b);
-    g.appendChild(b);
-  });
-}
-
-function selectCat(cat, btn) {
-  document.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('on'));
-  btn.classList.add('on');
-  curProduct = null; curOpts = {};
-  clearResults();
-  renderProds(cat.products);
-  document.getElementById('prodSection').style.display = 'block';
-  document.getElementById('optionsArea').innerHTML = '';
-  document.getElementById('dimSection').style.display = 'none';
-  document.getElementById('jobSection').style.display = 'none';
-}
-
-// ── PRODUCTS ──────────────────────────────────────────────────
-function renderProds(prods) {
-  const g = document.getElementById('prodGrid');
-  g.innerHTML = '';
-  prods.forEach(p => {
-    const b = document.createElement('button');
-    b.className = 'prod-card border-2 border-gray-200 rounded-2xl p-3 text-left';
-    b.innerHTML = `<div class="font-semibold text-gray-800 text-sm leading-tight">${p.label}</div>
-      <div class="text-xs text-gray-400 mt-0.5">${p.description}</div>
-      <div class="text-blue-600 font-bold text-sm mt-1">$${p.price_per_sqft_min}–$${p.price_per_sqft_max}<span class="text-gray-400 font-normal text-xs">/sqft</span></div>`;
-    b.onclick = () => selectProd(p.id, b);
-    g.appendChild(b);
-  });
-}
-
-async function selectProd(id, btn) {
-  document.querySelectorAll('.prod-card').forEach(b => b.classList.remove('on'));
-  btn.classList.add('on');
-  const detail = await fetchJSON(`/api/products/${id}`);
-  curProduct = detail;
-  curOpts = {};
-  (detail.fields||[]).forEach(f => { if(f.default) curOpts[f.id] = f.default; });
-  renderOptions();
-  document.getElementById('dimSection').style.display = 'block';
-  document.getElementById('jobSection').style.display = 'block';
-  setTimeout(() => document.getElementById('dimSection').scrollIntoView({behavior:'smooth',block:'nearest'}), 100);
-  schedulCalc();
-}
-
-// ── OPTIONS ───────────────────────────────────────────────────
-function renderOptions() {
-  const area = document.getElementById('optionsArea');
-  area.innerHTML = '';
-  if (!curProduct?.fields) return;
-
-  curProduct.fields.forEach(field => {
-    if (field.show_if) {
-      const dep = field.show_if;
-      if (curOpts[dep.field] !== dep.value) return;
-    }
-
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.dataset.fid = field.id;
-
-    const noteHtml = field.note ? `<p class="text-xs text-gray-400 mb-2">${field.note}</p>` : '';
-    card.innerHTML = `<div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">${field.label}</div>${noteHtml}<div id="fld_${field.id}" class="flex flex-wrap gap-1.5"></div>`;
-    area.appendChild(card);
-
-    const container = document.getElementById(`fld_${field.id}`);
-
-    if (field.type === 'radio') {
-      if (field.options.length <= 6) {
-        // Pill buttons
-        field.options.forEach(opt => {
-          const btn = document.createElement('button');
-          const isOn = curOpts[field.id] === opt.value;
-          btn.className = `opt-pill border-2 ${isOn?'on':'border-gray-200 text-gray-700'} rounded-xl px-3 py-2 text-sm font-medium`;
-          let badge = '';
-          const add = opt.price_add_sqft || opt.price_add_unit || opt.price_add_lf || opt.labor_add || 0;
-          if (add > 0) badge = ` <span class="text-xs opacity-70">+$${add}${opt.price_add_sqft?'/sf':opt.price_add_lf?'/lf':''}</span>`;
-          if (add < 0) badge = ` <span class="text-xs opacity-70">-$${Math.abs(add)}/sf</span>`;
-          btn.innerHTML = opt.label + badge;
-          btn.onclick = () => { curOpts[field.id] = opt.value; renderOptions(); schedulCalc(); };
-          container.appendChild(btn);
-        });
-      } else {
-        // Dropdown
-        const sel = document.createElement('select');
-        sel.className = 'w-full border border-gray-300 rounded-xl px-3 py-2 text-sm';
-        field.options.forEach(opt => {
-          const o = document.createElement('option');
-          o.value = opt.value;
-          o.selected = curOpts[field.id] === opt.value;
-          const add = opt.price_add_sqft||opt.price_add_unit||0;
-          o.textContent = opt.label + (add>0?` (+$${add})`:add<0?` (-$${Math.abs(add)})`:' ✓');
-          sel.appendChild(o);
-        });
-        sel.onchange = () => { curOpts[field.id] = sel.value; renderOptions(); schedulCalc(); };
-        container.appendChild(sel);
-      }
-    } else if (field.type === 'checkbox') {
-      if (!Array.isArray(curOpts[field.id])) curOpts[field.id] = [];
-      field.options.forEach(opt => {
-        const lbl = document.createElement('label');
-        lbl.className = 'flex items-center gap-2 py-1.5 cursor-pointer border-b border-gray-50 last:border-0 w-full';
-        const checked = curOpts[field.id].includes(opt.value);
-        lbl.innerHTML = `<input type="checkbox" ${checked?'checked':''} class="w-4 h-4 rounded text-blue-600 flex-shrink-0">
-          <span class="text-sm text-gray-800 flex-1">${opt.label}</span>
-          <span class="text-xs text-gray-400">+$${opt.price_add_unit}</span>`;
-        lbl.querySelector('input').onchange = e => {
-          if (!Array.isArray(curOpts[field.id])) curOpts[field.id] = [];
-          if (e.target.checked) curOpts[field.id].push(opt.value);
-          else curOpts[field.id] = curOpts[field.id].filter(v => v !== opt.value);
-          schedulCalc();
-        };
-        container.appendChild(lbl);
-      });
-    }
-  });
-}
-
-// ── DIMENSIONS ────────────────────────────────────────────────
-function bindDimInputs() {
-  ['wFt','wIn','wFrac','hFt','hIn','hFrac','qty'].forEach(id => {
-    const el = document.getElementById(id);
-    el.addEventListener('input', () => { updateArea(); schedulCalc(); });
-    el.addEventListener('change', () => { updateArea(); schedulCalc(); });
-  });
-}
-
-function updateArea() {
-  const wFt=+document.getElementById('wFt').value||0, wIn=+document.getElementById('wIn').value||0;
-  const wFr=FRAC[document.getElementById('wFrac').value]||0;
-  const hFt=+document.getElementById('hFt').value||0, hIn=+document.getElementById('hIn').value||0;
-  const hFr=FRAC[document.getElementById('hFrac').value]||0;
-  const q=+document.getElementById('qty').value||1;
-  const w=wFt*12+wIn+wFr, h=hFt*12+hIn+hFr;
-  if(w>0&&h>0){
-    const a=(w/12*h/12*q).toFixed(2);
-    const ws=`${wFt>0?wFt+"ft ":""}${wIn}"${wFr>0?" "+document.getElementById('wFrac').value+'"':""}`;
-    const hs=`${hFt>0?hFt+"ft ":""}${hIn}"${hFr>0?" "+document.getElementById('hFrac').value+'"':""}`;
-    document.getElementById('areaPreview').textContent=`${ws} × ${hs}${q>1?" × "+q:""}  =  ${a} sq ft`;
+// ─── AREA PREVIEW ────────────────────────────────────────────────────────────
+function updateAreaPreview() {
+  const area = calcAreaSqft();
+  const el = document.getElementById('area-preview');
+  if (area > 0) {
+    el.textContent = '📐 Area: ' + area.toFixed(2) + ' sq ft — ' + dimLabel();
   } else {
-    document.getElementById('areaPreview').textContent='Area: —';
+    el.textContent = '📐 Area: — sq ft';
   }
 }
 
-// ── ZIP ───────────────────────────────────────────────────────
-let zipTimer;
-function onZipInput(v) {
-  clearTimeout(zipTimer);
-  if(v.length!==5){document.getElementById('zipBadge').textContent='';return;}
-  zipTimer = setTimeout(async()=>{
-    try{
-      const d=await fetchJSON(`/api/zip/${v}`);
-      const m=d.multiplier>1?` +${Math.round((d.multiplier-1)*100)}%`:'';
-      document.getElementById('zipBadge').innerHTML=`<span class="text-blue-600 font-medium">${d.city}</span><span class="text-gray-400"> ~${d.travel_minutes}min${m}</span>`;
-      schedulCalc();
-    }catch(e){document.getElementById('zipBadge').textContent='';}
-  },500);
+// ─── STATUS ──────────────────────────────────────────────────────────────────
+function setStatus(txt) {
+  document.getElementById('calc-status').textContent = txt;
 }
 
-// ── CHOICES ───────────────────────────────────────────────────
-function setChoice(key, val, btn) {
-  state[key] = val;
-  const group = btn.closest('div').querySelectorAll('.choice-btn');
-  group.forEach(b=>{
-    b.classList.remove('on','bg-blue-600','text-white','border-blue-600');
-    b.classList.add('border-gray-200','text-gray-700');
+// ─── STEP 1: CATEGORY PILLS ──────────────────────────────────────────────────
+document.getElementById('category-pills').addEventListener('click', e => {
+  const btn = e.target.closest('[data-cat]');
+  if (!btn) return;
+  const cat = btn.dataset.cat;
+  if (cat === state.category) return;
+  state.category = cat;
+  state.productKey = null;
+  state.serviceId = null;
+  state.optionFields = [];
+  state.selectedModifiers = [];
+  document.querySelectorAll('#category-pills .pill').forEach(p => p.classList.toggle('selected', p.dataset.cat === cat));
+  renderProducts();
+  hideOptions();
+  scheduleCalc();
+});
+
+// ─── STEP 2: PRODUCTS ────────────────────────────────────────────────────────
+function renderProducts() {
+  const grid = document.getElementById('product-grid');
+  const loading = document.getElementById('product-loading');
+  const keys = CAT_MAP[state.category] || [];
+  grid.innerHTML = '';
+  loading.style.display = 'none';
+
+  // Try to fetch from API first, fall back to local map
+  fetchProducts(state.category, keys).then(products => {
+    grid.innerHTML = '';
+    products.forEach(p => {
+      const card = document.createElement('div');
+      card.className = 'product-card' + (p.key === state.productKey ? ' selected' : '');
+      card.dataset.key = p.key;
+      card.innerHTML = `
+        <div class="flex-1 min-w-0">
+          <div class="text-[13px] font-semibold text-gray-900 leading-tight mb-0.5">${p.label}</div>
+          <div class="text-[11px] text-gray-400 leading-tight truncate">${p.desc}</div>
+        </div>
+        <div class="radio-dot"></div>
+      `;
+      card.addEventListener('click', () => selectProduct(p.key, p.id));
+      grid.appendChild(card);
+    });
   });
-  btn.classList.add('on','bg-blue-600','text-white','border-blue-600');
-  btn.classList.remove('border-gray-200','text-gray-700');
-  schedulCalc();
 }
 
-// ── CALCULATE ─────────────────────────────────────────────────
-function schedulCalc() {
-  clearTimeout(calcTimer);
-  if (!curProduct) return;
-  const wIn=+document.getElementById('wIn').value||0, hIn=+document.getElementById('hIn').value||0;
-  if(wIn===0&&+document.getElementById('wFt').value===0) return;
-  if(hIn===0&&+document.getElementById('hFt').value===0) return;
-  document.getElementById('resultArea').innerHTML = `<div class="card text-center py-6 text-gray-400"><div class="animate-pulse text-2xl mb-1">⏳</div><div class="text-sm">Calculating...</div></div>`;
-  calcTimer = setTimeout(doCalc, 400);
+async function fetchProducts(category, keys) {
+  try {
+    const resp = await fetch('/api/products');
+    if (!resp.ok) throw new Error('not ok');
+    const data = await resp.json();
+    // Find matching category
+    const catData = data.find(c => c.category_id === category);
+    if (catData && catData.products) {
+      return catData.products.map(p => ({
+        key: p.id, id: p.id,
+        label: p.label,
+        desc: p.description || ''
+      }));
+    }
+  } catch(_) {}
+  // Fallback to local map
+  return keys.map(k => ({
+    key: k, id: SVC[k],
+    label: PRODUCT_LABELS[k]?.label || k,
+    desc: PRODUCT_LABELS[k]?.desc || ''
+  }));
 }
 
-async function doCalc() {
-  if (!curProduct) return;
+function selectProduct(key, id) {
+  state.productKey = key;
+  state.serviceId = id || SVC[key];
+  state.selectedModifiers = [];
+  document.querySelectorAll('#product-grid .product-card').forEach(c => {
+    c.classList.toggle('selected', c.dataset.key === key);
+  });
+  loadOptions(state.serviceId);
+  scheduleCalc();
+}
+
+// ─── STEP 3: OPTIONS ─────────────────────────────────────────────────────────
+function hideOptions() {
+  document.getElementById('options-section').style.display = 'none';
+}
+
+async function loadOptions(serviceId) {
+  const section = document.getElementById('options-section');
+  const fields = document.getElementById('options-fields');
+  fields.innerHTML = '<div class="flex justify-center py-3"><div class="spinner"></div></div>';
+  section.style.display = 'block';
+
+  try {
+    const resp = await fetch(`/api/products/${serviceId}`);
+    if (!resp.ok) throw new Error('not ok');
+    const data = await resp.json();
+    if (data.fields && data.fields.length > 0) {
+      state.optionFields = data.fields;
+      renderOptionFields(data.fields);
+    } else {
+      section.style.display = 'none';
+      state.optionFields = [];
+    }
+  } catch(_) {
+    section.style.display = 'none';
+    state.optionFields = [];
+  }
+}
+
+function renderOptionFields(fields) {
+  const container = document.getElementById('options-fields');
+  container.innerHTML = '';
+  fields.forEach(field => {
+    const wrap = document.createElement('div');
+    wrap.className = 'mb-4';
+    const labelEl = document.createElement('div');
+    labelEl.className = 'text-[12px] font-bold text-gray-700 mb-2';
+    labelEl.textContent = field.label;
+    wrap.appendChild(labelEl);
+
+    if (!field.options || field.options.length === 0) return;
+
+    if (field.options.length <= 5) {
+      // Pill row
+      const row = document.createElement('div');
+      row.className = 'pills-row';
+      field.options.forEach(opt => {
+        const isDefault = opt.value === field.default;
+        const btn = document.createElement('button');
+        btn.className = 'pill pill-sm' + (isDefault ? ' selected' : '');
+        btn.dataset.fieldId = field.id;
+        btn.dataset.value = opt.value;
+        let label = opt.label;
+        if (opt.price_add_sqft) label += ` <span class="text-[10px] font-normal opacity-70">+$${opt.price_add_sqft}/sqft</span>`;
+        else if (opt.price_add) label += ` <span class="text-[10px] font-normal opacity-70">+$${opt.price_add}</span>`;
+        btn.innerHTML = label;
+        if (isDefault && opt.value) {
+          addModifier(opt.value);
+        }
+        btn.addEventListener('click', () => {
+          row.querySelectorAll('.pill').forEach(p => p.classList.remove('selected'));
+          btn.classList.add('selected');
+          // Remove other options from same field
+          if (field.options) {
+            field.options.forEach(o => removeModifier(o.value));
+          }
+          addModifier(opt.value);
+          scheduleCalc();
+        });
+        row.appendChild(btn);
+      });
+      wrap.appendChild(row);
+    } else {
+      // Dropdown
+      const sel = document.createElement('select');
+      sel.className = 'full-select';
+      sel.dataset.fieldId = field.id;
+      field.options.forEach(opt => {
+        const o = document.createElement('option');
+        o.value = opt.value;
+        let label = opt.label;
+        if (opt.price_add_sqft) label += ` (+$${opt.price_add_sqft}/sqft)`;
+        else if (opt.price_add) label += ` (+$${opt.price_add})`;
+        o.textContent = label;
+        if (opt.value === field.default) o.selected = true;
+        sel.appendChild(o);
+      });
+      if (field.default) addModifier(field.default);
+      sel.addEventListener('change', () => {
+        if (field.options) field.options.forEach(o => removeModifier(o.value));
+        addModifier(sel.value);
+        scheduleCalc();
+      });
+      wrap.appendChild(sel);
+    }
+    container.appendChild(wrap);
+  });
+}
+
+function addModifier(val) {
+  if (val && !state.selectedModifiers.includes(val)) {
+    state.selectedModifiers.push(val);
+  }
+}
+function removeModifier(val) {
+  state.selectedModifiers = state.selectedModifiers.filter(v => v !== val);
+}
+
+// ─── STEP 4: DIMENSIONS ──────────────────────────────────────────────────────
+function bindDimensions() {
+  ['width-ft', 'width-in', 'height-ft', 'height-in'].forEach(id => {
+    document.getElementById(id).addEventListener('input', e => {
+      const val = parseInt(e.target.value) || 0;
+      const key = id.replace('-', '_').replace(/-/g, '_');
+      if (id === 'width-ft') state.widthFt = val;
+      else if (id === 'width-in') state.widthIn = Math.min(val, 11);
+      else if (id === 'height-ft') state.heightFt = val;
+      else if (id === 'height-in') state.heightIn = Math.min(val, 11);
+      updateAreaPreview();
+      scheduleCalc();
+    });
+  });
+  document.getElementById('width-frac').addEventListener('change', e => {
+    state.widthFrac = e.target.value;
+    updateAreaPreview();
+    scheduleCalc();
+  });
+  document.getElementById('height-frac').addEventListener('change', e => {
+    state.heightFrac = e.target.value;
+    updateAreaPreview();
+    scheduleCalc();
+  });
+  // Qty
+  document.getElementById('qty-minus').addEventListener('click', () => {
+    if (state.quantity > 1) { state.quantity--; document.getElementById('qty-display').textContent = state.quantity; scheduleCalc(); }
+  });
+  document.getElementById('qty-plus').addEventListener('click', () => {
+    if (state.quantity < 99) { state.quantity++; document.getElementById('qty-display').textContent = state.quantity; scheduleCalc(); }
+  });
+}
+
+// ─── STEP 5: LOCATION & JOB ──────────────────────────────────────────────────
+function bindJobDetails() {
+  // ZIP
+  const zipInput = document.getElementById('zip-input');
+  zipInput.addEventListener('input', e => {
+    const z = e.target.value.replace(/\D/g, '').slice(0, 5);
+    zipInput.value = z;
+    state.zipCode = z;
+    state.zipData = null;
+    document.getElementById('zip-badge').style.display = 'none';
+    if (z.length === 5) {
+      clearTimeout(state.zipTimer);
+      state.zipTimer = setTimeout(() => lookupZip(z), 600);
+    }
+    scheduleCalc();
+  });
+
+  // Floor
+  document.getElementById('floor-btns').addEventListener('click', e => {
+    const btn = e.target.closest('[data-floor]');
+    if (!btn) return;
+    state.floor = parseInt(btn.dataset.floor);
+    document.querySelectorAll('#floor-btns .seg-btn').forEach(b => b.classList.toggle('selected', b.dataset.floor === btn.dataset.floor));
+    scheduleCalc();
+  });
+
+  // Techs
+  document.getElementById('tech-btns').addEventListener('click', e => {
+    const btn = e.target.closest('[data-tech]');
+    if (!btn) return;
+    state.numTechs = parseInt(btn.dataset.tech);
+    document.querySelectorAll('#tech-btns .sq-btn').forEach(b => b.classList.toggle('selected', b.dataset.tech === btn.dataset.tech));
+    scheduleCalc();
+  });
+
+  // Urgency
+  document.getElementById('urgency-btns').addEventListener('click', e => {
+    const btn = e.target.closest('[data-urgency]');
+    if (!btn) return;
+    state.urgency = btn.dataset.urgency;
+    document.querySelectorAll('#urgency-btns .urgency-btn').forEach(b => b.classList.toggle('selected', b.dataset.urgency === btn.dataset.urgency));
+    scheduleCalc();
+  });
+
+  // Notes
+  document.getElementById('notes-input').addEventListener('input', e => {
+    state.notes = e.target.value;
+  });
+}
+
+async function lookupZip(zip) {
+  const badge = document.getElementById('zip-badge');
+  const loading = document.getElementById('zip-loading');
+  loading.style.display = 'inline-flex';
+  badge.style.display = 'none';
+  try {
+    const resp = await fetch(`/api/zip/${zip}`);
+    if (!resp.ok) throw new Error();
+    const data = await resp.json();
+    state.zipData = data;
+    const mult = data.multiplier ? '+' + Math.round((data.multiplier - 1) * 100) + '%' : '';
+    const travel = data.travel_minutes ? `~${data.travel_minutes}min` : '';
+    badge.textContent = `📍 ${data.city || zip}${travel ? ' ' + travel : ''}${mult ? ' ' + mult : ''}`;
+    badge.style.display = 'inline-flex';
+  } catch(_) {
+    badge.style.display = 'none';
+  } finally {
+    loading.style.display = 'none';
+    scheduleCalc();
+  }
+}
+
+// ─── CALCULATION ─────────────────────────────────────────────────────────────
+function scheduleCalc() {
+  clearTimeout(state.calcTimer);
+  state.calcTimer = setTimeout(() => runCalc(), 400);
+}
+
+async function runCalc() {
+  if (!state.serviceId) {
+    setStatus('Select a product type');
+    return;
+  }
+  const area = calcAreaSqft();
+  if (area <= 0) {
+    setStatus('Enter dimensions');
+    return;
+  }
+
+  setStatus('Calculating…');
+  document.getElementById('result-spinner').style.display = 'flex';
+
   const body = {
-    service_id: SVC[curProduct.id] || 1,
-    width_ft: +document.getElementById('wFt').value||0,
-    width_in: +document.getElementById('wIn').value||0,
-    width_frac: document.getElementById('wFrac').value,
-    height_ft: +document.getElementById('hFt').value||0,
-    height_in: +document.getElementById('hIn').value||0,
-    height_frac: document.getElementById('hFrac').value,
-    quantity: +document.getElementById('qty').value||1,
-    zip_code: document.getElementById('zip').value||'91324',
+    service_id: state.serviceId,
+    width_ft: state.widthFt,
+    width_in: state.widthIn,
+    width_frac: state.widthFrac,
+    height_ft: state.heightFt,
+    height_in: state.heightIn,
+    height_frac: state.heightFrac,
+    quantity: state.quantity,
+    zip_code: state.zipCode || null,
     floor: state.floor,
-    num_technicians: state.techs,
+    num_technicians: state.numTechs,
     urgency: state.urgency,
-    modifier_ids: [],
-    notes: document.getElementById('notes').value,
+    modifier_ids: state.selectedModifiers,
+    notes: state.notes
   };
 
   try {
-    const d = await fetchJSON('/api/calculate', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    showResult(d);
-    loadSimilar(HCP[curProduct.id]||'single_pane', d.total_area_sqft);
-  } catch(e) {
-    document.getElementById('resultArea').innerHTML = `<div class="card border-red-200 bg-red-50 text-red-700 text-sm p-4">❌ ${e.message}</div>`;
+    const resp = await fetch('/api/calculate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!resp.ok) throw new Error('calc error');
+    const data = await resp.json();
+    state.calcResult = data;
+    renderResult(data);
+    fetchSimilarJobs(state.category, area);
+    setStatus('Updated');
+  } catch(err) {
+    // Fallback: client-side estimate
+    const estimate = clientSideEstimate(area);
+    state.calcResult = estimate;
+    renderResult(estimate);
+    setStatus('Estimated (offline)');
+  } finally {
+    document.getElementById('result-spinner').style.display = 'none';
   }
 }
 
-function showResult(d) {
-  const opts = Object.entries(curOpts)
-    .filter(([k,v])=>v&&!(Array.isArray(v)&&!v.length))
-    .map(([k,v])=>`<span class="inline-block bg-gray-100 text-gray-600 text-xs rounded-full px-2 py-0.5 mr-1">${Array.isArray(v)?v.join('+'):v}</span>`)
-    .join('');
+// Client-side fallback estimate
+function clientSideEstimate(area) {
+  const rates = {
+    residential_single: [12, 18], residential_igu: [22, 35], residential_foggy: [18, 28],
+    commercial_storefront: [28, 45], commercial_partition: [35, 55], commercial_door: [300, 600],
+    shower_door: [400, 900], shower_mirror: [15, 25],
+    specialty_tabletop: [20, 35], specialty_custom: [18, 30], specialty_laminated: [30, 50]
+  };
+  const [rMin, rMax] = rates[state.productKey] || [20, 35];
+  const qty = state.quantity;
+  const urgMulti = { standard: 1, same_day: 1.30, emergency: 1.50 };
+  const floorAdd = { 1: 0, 2: 150, 3: 300 };
+  const zipMult = state.zipData?.multiplier || 1;
+  const tax = 1.1025;
 
-  const notes = (d.notes||[]).filter(n=>n).map(n=>`<div class="text-xs text-orange-700 mt-1">⚠️ ${n}</div>`).join('');
+  const baseMin = area * rMin * qty * urgMulti[state.urgency] * zipMult + (floorAdd[state.floor] || 0);
+  const baseMax = area * rMax * qty * urgMulti[state.urgency] * zipMult + (floorAdd[state.floor] || 0);
 
-  document.getElementById('resultArea').innerHTML = `
-  <div class="card result-in border-2 border-blue-600 shadow-md">
-    <div class="text-xs text-gray-500 mb-1">${d.service_name} · ${d.total_area_sqft} sqft · ${d.location||'Local'}</div>
-    <div class="mb-2">${opts}</div>
-
-    <div class="text-3xl font-bold text-blue-600 mb-0.5">
-      $${d.grand_total_min.toLocaleString()} – $${d.grand_total_max.toLocaleString()}
-    </div>
-    <div class="text-xs text-gray-400 mb-4">includes LA tax 10.25%</div>
-
-    <div class="bg-gray-50 rounded-xl p-3 space-y-1.5 text-sm mb-3">
-      <div class="flex justify-between">
-        <span class="text-gray-500">Material</span>
-        <span class="font-medium">$${d.breakdown.material_min.toFixed(0)} – $${d.breakdown.material_max.toFixed(0)}</span>
-      </div>
-      <div class="flex justify-between">
-        <span class="text-gray-500">Labor</span>
-        <span class="font-medium">$${d.breakdown.labor_min.toFixed(0)} – $${d.breakdown.labor_max.toFixed(0)}</span>
-      </div>
-      ${d.breakdown.travel_cost>0?`<div class="flex justify-between"><span class="text-gray-500">Travel (${d.location})</span><span>$${d.breakdown.travel_cost.toFixed(0)}</span></div>`:''}
-      ${d.breakdown.floor_surcharge>0?`<div class="flex justify-between text-orange-600"><span>Floor surcharge</span><span>+$${d.breakdown.floor_surcharge}</span></div>`:''}
-      ${d.breakdown.extra_tech_cost>0?`<div class="flex justify-between text-orange-600"><span>Extra technician</span><span>+$${d.breakdown.extra_tech_cost.toFixed(0)}</span></div>`:''}
-      ${d.breakdown.urgency_label?`<div class="text-orange-500 text-xs">${d.breakdown.urgency_label}</div>`:''}
-      <div class="border-t border-gray-200 pt-1.5 flex justify-between font-semibold">
-        <span>Subtotal</span><span>$${d.total_min.toFixed(0)} – $${d.total_max.toFixed(0)}</span>
-      </div>
-      <div class="flex justify-between text-gray-400 text-xs">
-        <span>Tax 10.25%</span><span>$${d.tax_min.toFixed(0)} – $${d.tax_max.toFixed(0)}</span>
-      </div>
-    </div>
-
-    ${notes}
-
-    <div class="flex gap-2 mt-3">
-      <button onclick="copyResult()" class="flex-1 bg-blue-600 text-white rounded-xl py-2.5 text-sm font-semibold">📋 Copy</button>
-      <button onclick="window.print()" class="flex-1 border border-gray-300 text-gray-700 rounded-xl py-2.5 text-sm">🖨 Print</button>
-    </div>
-  </div>`;
-  window._lastResult = d;
-  window._lastLabel = d.service_name;
+  return {
+    price_min: baseMin * tax,
+    price_max: baseMax * tax,
+    breakdown: [
+      { label: 'Glass (material)', min: area * rMin * qty, max: area * rMax * qty },
+      { label: 'Labor', min: 75, max: 150 },
+      { label: 'Floor surcharge', min: floorAdd[state.floor] || 0, max: floorAdd[state.floor] || 0 },
+      { label: 'Location factor', min: zipMult - 1, max: zipMult - 1, pct: true },
+      { label: 'Tax (10.25%)', min: baseMin * 0.1025, max: baseMax * 0.1025 }
+    ]
+  };
 }
 
-async function loadSimilar(cat, area) {
-  const el = document.getElementById('similarArea');
-  if (!cat || !area || area < 0.3) { el.innerHTML=''; return; }
+function renderResult(data) {
+  const section = document.getElementById('result-section');
+  section.style.display = 'block';
+  section.classList.remove('fade-in');
+  void section.offsetWidth;
+  section.classList.add('fade-in');
+
+  document.getElementById('result-price').textContent = fmtRange(data.price_min, data.price_max);
+
+  // Tax note
+  const taxNote = document.getElementById('result-tax-note');
+  taxNote.textContent = 'includes LA tax 10.25%';
+
+  // Breakdown table
+  const table = document.getElementById('breakdown-table');
+  if (data.breakdown && data.breakdown.length > 0) {
+    table.innerHTML = data.breakdown.map(row => {
+      const val = row.pct
+        ? (row.min * 100).toFixed(0) + '%'
+        : fmtRange(row.min, row.max);
+      return `<div class="breakdown-row"><span class="text-gray-600">${row.label}</span><span class="font-medium text-gray-900">${val}</span></div>`;
+    }).join('') + `<div class="breakdown-row"><span>Total</span><span>${fmtRange(data.price_min, data.price_max)}</span></div>`;
+  } else {
+    table.innerHTML = `<div class="breakdown-row"><span>Estimated Total</span><span>${fmtRange(data.price_min, data.price_max)}</span></div>`;
+  }
+}
+
+// ─── SIMILAR JOBS ─────────────────────────────────────────────────────────────
+async function fetchSimilarJobs(category, areaSqft) {
+  const section = document.getElementById('similar-section');
+  section.style.cssText = 'display:none';
   try {
-    const jobs = await fetchJSON(`/api/similar-jobs?category=${cat}&area_sqft=${area}`);
-    if (!jobs.length) { el.innerHTML=''; return; }
-    const rows = jobs.map(j=>`
-      <tr class="border-b border-amber-100 last:border-0">
-        <td class="py-1.5 pr-2 text-xs text-gray-600 font-medium">#${j.invoice}</td>
-        <td class="py-1.5 pr-2 text-xs text-gray-500">${j.area_sqft}sf</td>
-        <td class="py-1.5 pr-2 text-xs font-semibold text-blue-700">$${j.price.toLocaleString()}</td>
-        <td class="py-1.5 text-xs text-gray-400">${j.zip_code||''} ${j.date?j.date.slice(0,7):''}</td>
-      </tr>
-      <tr><td colspan="4" class="pb-2 text-xs text-gray-400 leading-tight">${j.description.slice(0,80)}</td></tr>`
-    ).join('');
-    el.innerHTML = `<div class="bg-amber-50 border border-amber-200 rounded-2xl p-4">
-      <div class="text-xs font-semibold text-amber-800 mb-2">📋 Similar past jobs (${jobs.length} found)</div>
-      <table class="w-full">${rows}</table>
-    </div>`;
-  } catch(e) { el.innerHTML=''; }
+    const resp = await fetch(`/api/similar-jobs?category=${encodeURIComponent(category)}&area_sqft=${areaSqft.toFixed(2)}`);
+    if (!resp.ok) throw new Error();
+    const data = await resp.json();
+    if (!data || !data.length) return;
+    const rows = data.slice(0, 3);
+    const tableHTML = `
+      <table class="w-full text-xs">
+        <thead><tr class="text-amber-700 border-b border-amber-200">
+          <th class="text-left pb-1 font-semibold">Job</th>
+          <th class="text-right pb-1 font-semibold">Area</th>
+          <th class="text-right pb-1 font-semibold">Price</th>
+        </tr></thead>
+        <tbody>
+          ${rows.map(r => `<tr class="border-b border-amber-100 last:border-0">
+            <td class="py-1 pr-2 text-amber-900">${r.label || r.service || '—'}</td>
+            <td class="py-1 text-right text-amber-700">${r.area_sqft ? r.area_sqft.toFixed(1) + ' sqft' : '—'}</td>
+            <td class="py-1 text-right font-medium text-amber-900">${r.price ? fmt(r.price) : '—'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+    document.getElementById('similar-table').innerHTML = tableHTML;
+    section.style.cssText = 'display:block; background:#FFFBEB; border-color:#FCD34D; border-width:1.5px; border-style:solid; border-radius:12px; padding:12px; margin-bottom:16px;';
+    section.classList.remove('fade-in');
+    void section.offsetWidth;
+    section.classList.add('fade-in');
+  } catch(_) {
+    section.style.display = 'none';
+  }
 }
 
-function clearResults() {
-  document.getElementById('resultArea').innerHTML = '';
-  document.getElementById('similarArea').innerHTML = '';
-}
+// ─── COPY & PRINT ────────────────────────────────────────────────────────────
+document.getElementById('copy-btn').addEventListener('click', () => {
+  if (!state.calcResult) return;
+  const product = PRODUCT_LABELS[state.productKey]?.label || state.productKey || 'Glass';
+  const area = calcAreaSqft();
+  const text = [
+    'ROMI Glass Estimate',
+    '──────────────────',
+    `Service: ${product}`,
+    `Size: ${dimLabel()} (${area.toFixed(2)} sqft)`,
+    `Quantity: ${state.quantity}`,
+    state.zipCode ? `Location: ${state.zipData?.city || state.zipCode}` : null,
+    `Floor: ${state.floor}`,
+    `Urgency: ${state.urgency}`,
+    `Price: ${fmtRange(state.calcResult.price_min, state.calcResult.price_max)}`,
+    state.notes ? `Notes: ${state.notes}` : null,
+    '',
+    'Generated by ROMI Estimate'
+  ].filter(Boolean).join('\n');
 
-function copyResult() {
-  const d = window._lastResult;
-  if(!d) return;
-  const text = `ESTIMATE — ${window._lastLabel}\nArea: ${d.total_area_sqft} sqft | ${d.location}\n\nMaterial: $${d.breakdown.material_min}–$${d.breakdown.material_max}\nLabor: $${d.breakdown.labor_min}–$${d.breakdown.labor_max}\n${d.breakdown.travel_cost>0?`Travel: $${d.breakdown.travel_cost}\n`:''}TOTAL (before tax): $${d.total_min}–$${d.total_max}\nTax 10.25%: $${d.tax_min}–$${d.tax_max}\nGRAND TOTAL: $${d.grand_total_min}–$${d.grand_total_max}\n\nFast Glass & Windows — 213-566-8886`;
-  navigator.clipboard.writeText(text).then(()=>{
-    const btn = event.target;
-    btn.textContent = '✅ Copied!';
-    setTimeout(()=>btn.textContent='📋 Copy', 1500);
-  });
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = '✓ Copied!';
+    setTimeout(() => {
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy';
+    }, 2000);
+  }).catch(() => {});
+});
+
+document.getElementById('print-btn').addEventListener('click', () => {
+  window.print();
+});
+
+// ─── PRINT STYLES ────────────────────────────────────────────────────────────
+const printStyles = document.createElement('style');
+printStyles.textContent = `
+  @media print {
+    header { position: static !important; box-shadow: none !important; border-bottom: 1px solid #E5E7EB !important; }
+    body { background: white !important; }
+    #copy-btn, #print-btn { display: none !important; }
+    .section-card, .result-section { box-shadow: none !important; border: 1px solid #E5E7EB !important; }
+  }
+`;
+document.head.appendChild(printStyles);
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+function init() {
+  bindDimensions();
+  bindJobDetails();
+  updateAreaPreview();
+  renderProducts();
+  // Auto-select first product after a short delay
+  setTimeout(() => {
+    const keys = CAT_MAP[state.category];
+    if (keys && keys.length > 0 && !state.productKey) {
+      selectProduct(keys[0], SVC[keys[0]]);
+    }
+  }, 300);
 }
 
 init();
