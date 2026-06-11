@@ -148,7 +148,7 @@ Recommend: call directly (323) 588-0180
 
 ## VICTOR'S RECOMMENDATIONS FOR FAST GLASS
 
-### Primary Supplier: Western States Glass
+### ✅ OUR SUPPLIER #1: Western States Glass
 ```
 Best for:
 - High-volume residential IGU replacement
@@ -158,7 +158,7 @@ Best for:
 Action: Get wholesale account (credit application to kristin@wsglass.com)
 ```
 
-### Secondary Supplier: Girard Glass
+### ✅ OUR SUPPLIER #2: Girard Glass
 ```
 Best for:
 - Specialty glass not stocked at Western States
