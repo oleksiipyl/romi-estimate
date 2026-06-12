@@ -25,6 +25,14 @@
       border-color: #93c5fd; background: #f0f9ff; color: #1d4ed8;
       box-shadow: 0 0 0 1px #dbeafe;
     }
+    .qty-btn {
+      transition: all .15s ease; cursor: pointer;
+      border: 1.5px solid #e2e8f0; background: #fff; color: #475569;
+    }
+    .qty-btn:active { background: #f1f5f9; }
+    .acc-header { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .acc-chevron { transition: transform .2s ease; }
+    .acc-chevron.open { transform: rotate(180deg); }
     .result-in { animation: ri .25s ease; }
     @keyframes ri { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
     input[type=number]::-webkit-outer-spin-button,
@@ -35,7 +43,7 @@
       border: 1px solid #e2e8f0;
       border-radius: 14px;
       padding: 16px;
-      box-shadow: 0 1px 3px rgba(15,23,42,.06);
+      box-shadow: 0 1px 2px rgba(15,23,42,.04);
     }
     .section-hd {
       display: flex;
@@ -71,21 +79,6 @@
       transition: border-color .15s, box-shadow .15s;
     }
     .inp:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
-    .dim-inp { font-size: 20px; padding: 14px 8px; font-weight: 600; border-radius: 12px; }
-    .area-preview {
-      margin-top: 16px; padding: 16px;
-      background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 14px; text-align: center;
-    }
-    .area-preview .area-val { font-size: 24px; font-weight: 700; color: #1e293b; line-height: 1.2; }
-    .area-preview .area-dim { font-size: 13px; color: #64748b; margin-top: 4px; }
-    .qty-btn {
-      transition: all .15s ease; cursor: pointer;
-      border: 1.5px solid #e2e8f0; background: #fff; color: #475569;
-    }
-    .qty-btn:active { background: #f1f5f9; }
-    .acc-header { cursor: pointer; -webkit-tap-highlight-color: transparent; }
-    .acc-chevron { transition: transform .2s ease; flex-shrink: 0; }
-    .acc-chevron.open { transform: rotate(180deg); }
     .logo-mark {
       width: 40px; height: 40px;
       border-radius: 10px;
@@ -120,7 +113,7 @@
   </div>
 </header>
 
-<main class="max-w-lg mx-auto px-3 pt-4 space-y-5">
+<main class="max-w-lg mx-auto px-3 pt-4 space-y-4">
 
   <!-- 1. CATEGORY -->
   <section class="section-card">
@@ -140,20 +133,23 @@
     <div class="grid grid-cols-2 gap-2" id="prodGrid"></div>
   </section>
 
-  <!-- 3. DIMENSIONS -->
+  <!-- 3. OPTIONS (dynamic) -->
+  <div id="optArea" class="space-y-3"></div>
+
+  <!-- 4. DIMENSIONS -->
   <section class="section-card" id="dimSection" style="display:none">
     <div class="section-hd">
       <span class="step-num">3</span>
       <span class="section-title">Size (inches)</span>
     </div>
-    <div class="space-y-4">
+    <div class="space-y-3">
       <div>
-        <div class="field-lbl mb-2">Width</div>
-        <div class="flex items-center gap-2">
+        <div class="field-lbl">Width</div>
+        <div class="flex items-center gap-1.5">
           <input id="wIn" type="number" min="1" max="300" value="24"
-            class="inp dim-inp flex-1 min-w-0 text-center text-slate-800">
-          <span class="text-xs text-slate-400 font-medium w-4 flex-shrink-0">in</span>
-          <select id="wFrac" class="inp w-[76px] flex-shrink-0 py-3 px-1 text-xs text-slate-700">
+            class="inp flex-1 min-w-0 text-center py-2 text-base font-semibold text-slate-800">
+          <span class="text-[10px] text-slate-400 font-medium w-4 flex-shrink-0">in</span>
+          <select id="wFrac" class="inp w-[72px] flex-shrink-0 py-2 px-1 text-[11px] text-slate-700">
             <option value="0">+0"</option>
             <option value="1/8">+⅛"</option>
             <option value="1/4">+¼"</option>
@@ -166,12 +162,12 @@
         </div>
       </div>
       <div>
-        <div class="field-lbl mb-2">Height</div>
-        <div class="flex items-center gap-2">
+        <div class="field-lbl">Height</div>
+        <div class="flex items-center gap-1.5">
           <input id="hIn" type="number" min="1" max="300" value="36"
-            class="inp dim-inp flex-1 min-w-0 text-center text-slate-800">
-          <span class="text-xs text-slate-400 font-medium w-4 flex-shrink-0">in</span>
-          <select id="hFrac" class="inp w-[76px] flex-shrink-0 py-3 px-1 text-xs text-slate-700">
+            class="inp flex-1 min-w-0 text-center py-2 text-base font-semibold text-slate-800">
+          <span class="text-[10px] text-slate-400 font-medium w-4 flex-shrink-0">in</span>
+          <select id="hFrac" class="inp w-[72px] flex-shrink-0 py-2 px-1 text-[11px] text-slate-700">
             <option value="0" selected>+0"</option>
             <option value="1/8">+⅛"</option>
             <option value="1/4">+¼"</option>
@@ -184,20 +180,8 @@
         </div>
       </div>
     </div>
-    <div class="mt-4">
-      <div class="field-lbl mb-2">Common sizes</div>
-      <div class="grid grid-cols-4 gap-2">
-        <button type="button" onclick="setQuickSize(24,36)" class="opt-btn rounded-xl py-2.5 text-xs font-semibold">24×36</button>
-        <button type="button" onclick="setQuickSize(36,48)" class="opt-btn rounded-xl py-2.5 text-xs font-semibold">36×48</button>
-        <button type="button" onclick="setQuickSize(48,60)" class="opt-btn rounded-xl py-2.5 text-xs font-semibold">48×60</button>
-        <button type="button" onclick="setQuickSize(24,24)" class="opt-btn rounded-xl py-2.5 text-xs font-semibold">24×24</button>
-      </div>
-    </div>
-    <div class="area-preview" id="areaPreview">
-      <div class="area-val">—</div>
-      <div class="area-dim">Enter width &amp; height</div>
-    </div>
-    <div id="minChargeNote" class="hidden mt-3 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-xs text-amber-800">Minimum charge applies — small piece</div>
+    <div class="mt-3 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-xs text-slate-600 font-medium" id="areaPreview">Area: —</div>
+    <div id="minChargeNote" class="hidden mt-1.5 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 text-[11px] text-amber-800">Minimum charge applies — small piece</div>
   </section>
 
   <!-- HW QTY -->
@@ -216,35 +200,11 @@
     </div>
   </section>
 
-  <!-- 4. BASIC OPTIONS -->
-  <section class="section-card" id="optBasicSection" style="display:none">
-    <div class="section-hd">
-      <span class="step-num">4</span>
-      <span class="section-title">Options</span>
-    </div>
-    <div id="optBasicArea" class="space-y-4"></div>
-  </section>
-
-  <!-- 5. ADVANCED OPTIONS (accordion) -->
-  <section class="section-card" id="optAdvSection" style="display:none">
-    <button type="button" id="advAccordionBtn" class="acc-header w-full flex items-center gap-3 text-left">
-      <div class="flex-1 min-w-0">
-        <div class="flex items-center gap-2">
-          <span class="step-num">5</span>
-          <span class="section-title normal-case tracking-normal">Advanced Options</span>
-          <svg id="advChevron" class="acc-chevron w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-        </div>
-        <div id="advSummary" class="text-xs text-slate-500 mt-2 leading-relaxed"></div>
-      </div>
-    </button>
-    <div id="optAdvArea" class="hidden space-y-4 mt-4 pt-4 border-t border-slate-100"></div>
-  </section>
-
-  <!-- 6. JOB DETAILS -->
+  <!-- 5. JOB DETAILS -->
   <section class="section-card" id="jobSection" style="display:none">
     <div class="section-hd">
-      <span class="step-num">6</span>
-      <span class="section-title">Location &amp; Job</span>
+      <span class="step-num">4</span>
+      <span class="section-title">Job Details</span>
     </div>
 
     <div class="mb-4">
@@ -307,7 +267,7 @@
       <span class="font-bold text-green-800">ИТОГО:</span>
       <span id="cartTotal" class="text-xl font-bold text-green-700">$0</span>
     </div>
-    <div id="cartRange" class="text-sm text-gray-500 text-right mt-1"></div>
+    <div id="cartRange" class="text-xs text-gray-400 text-right"></div>
     <button onclick="copyCart()" class="w-full mt-2 bg-green-600 text-white rounded-xl py-2.5 text-sm font-semibold">📋 Copy All</button>
   </div>
 
@@ -319,36 +279,9 @@ const SVC={residential_single:1,residential_igu:2,residential_foggy:13,commercia
 const HCP={residential_single:'single_pane',residential_igu:'double_pane_igu',residential_foggy:'double_pane_igu',commercial_storefront:'commercial_storefront',shower_door:'shower_door',shower_mirror:'mirror',specialty_tabletop:'custom_tempered',specialty_laminated:'laminated'};
 const FRAC={'0':0,'1/8':.125,'1/4':.25,'3/8':.375,'1/2':.5,'5/8':.625,'3/4':.75,'7/8':.875};
 
-let cats=[], prod=null, opts={}, state={floor:1,techs:1,urgency:'normal'}, timer=null, hwQty=1, advancedOpen=false;
+let cats=[], prod=null, opts={}, state={floor:1,techs:1,urgency:'normal'}, timer=null, hwQty=1, expandedOpt=null;
+const ACCORDION_IDS=new Set(['igu_package','heat_treatment','spacer','gas_fill','grids']);
 let cart=[];  // [{label, midPrice, rangeMin, rangeMax, area, qty}]
-
-const BASIC_BY_PRODUCT={
-  residential_single:new Set(['frame_type','glass_type']),
-  residential_igu:new Set(['igu_package']),
-  residential_foggy:new Set(['igu_package']),
-  commercial_storefront:new Set(['system_type','glass_type']),
-  commercial_partition:new Set(['glass_type']),
-  commercial_door:new Set(['door_type','glass_type']),
-  shower_door:new Set(['door_style','glass_type']),
-  shower_mirror:new Set(['mirror_type']),
-  specialty_tabletop:new Set(['glass_type']),
-  specialty_custom:new Set(['application','glass_type']),
-  specialty_laminated:new Set(['glass_type']),
-};
-
-const FIELD_LABELS={
-  heat_treatment:'Tempered?',
-  gas_fill:'Argon Gas',
-  spacer:'Spacer',
-  grids:'Grids',
-  igu_package:'Glass Package',
-  frame_type:'Frame Type',
-  tint_color:'Tint Color',
-  grid_width:'Grid Width',
-  grid_color:'Grid Color',
-};
-
-const HEAT_NOTE='Required for doors, bathrooms, near floor';
 
 async function init(){
   try{
@@ -382,11 +315,8 @@ function renderCats(){
 function selCat(cat,btn){
   document.querySelectorAll('.pill').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on');
-  prod=null; opts={}; advancedOpen=false;
-  document.getElementById('optBasicArea').innerHTML='';
-  document.getElementById('optAdvArea').innerHTML='';
-  document.getElementById('optBasicSection').style.display='none';
-  document.getElementById('optAdvSection').style.display='none';
+  prod=null; opts={}; expandedOpt=null;
+  document.getElementById('optArea').innerHTML='';
   document.getElementById('dimSection').style.display='none';
   document.getElementById('hwQtySection').style.display='none';
   document.getElementById('jobSection').style.display='none';
@@ -404,8 +334,8 @@ function renderProds(ps){
     const btn=document.createElement('button');
     btn.className='card-sel border-2 border-slate-200 rounded-xl p-3 text-left';
     const isHwCard = p.category==='hardware' || p.is_flat_price;
-    const priceLabel = isHwCard ? `$${p.price_per_sqft_min}–$${p.price_per_sqft_max}` : `$${p.price_per_sqft_min}–$${p.price_per_sqft_max}<span class="text-slate-400 text-xs font-normal">/sf</span>`;
-    btn.innerHTML=`<div class="font-semibold text-slate-800 text-sm leading-tight">${friendlyProdLabel(p.label)}</div><div class="text-slate-500 font-semibold text-sm mt-1.5">${priceLabel}</div>`;
+    const priceLabel = isHwCard ? `$${p.price_per_sqft_min}–$${p.price_per_sqft_max}` : `$${p.price_per_sqft_min}–$${p.price_per_sqft_max}<span class="text-gray-400 text-xs font-normal">/sf</span>`;
+    btn.innerHTML=`<div class="font-semibold text-slate-800 text-sm leading-tight">${p.label}</div><div class="text-slate-500 font-semibold text-sm mt-1.5">${priceLabel}</div>`;
     btn.onclick=()=>selProd(p.id,btn);
     g.appendChild(btn);
   });
@@ -415,209 +345,105 @@ async function selProd(id,btn){
   document.querySelectorAll('.card-sel').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on');
   const d=await fj(`/api/products/${id}`);
-  prod=d; opts={}; advancedOpen=false;
+  prod=d; opts={}; expandedOpt=null;
   (d.fields||[]).forEach(f=>{if(f.default)opts[f.id]=f.default;});
   renderOpts();
+  // Hardware: no dimensions needed
   const isHw = prod.is_flat_price || prod.category==='hardware';
   document.getElementById('dimSection').style.display=isHw?'none':'block';
   document.getElementById('hwQtySection').style.display=isHw?'block':'none';
   document.getElementById('jobSection').style.display='block';
-  setTimeout(()=>{
-    const t=isHw?'hwQtySection':'dimSection';
-    document.getElementById(t).scrollIntoView({behavior:'smooth',block:'nearest'});
-  },80);
+  setTimeout(()=>document.getElementById('dimSection').scrollIntoView({behavior:'smooth',block:'nearest'}),80);
   sched();
 }
 
-// ── LABEL HELPERS ─────────────────────────────────────
-function friendlyProdLabel(label){
-  return label
-    .replace(/Double Pane IGU/gi,'Double Pane')
-    .replace(/Foggy IGU/gi,'Foggy Double Pane')
-    .replace(/\bIGU\b/gi,'Double Pane');
-}
-
-function friendlyFieldLabel(field){
-  return FIELD_LABELS[field.id] || friendlyProdLabel(field.label);
-}
-
-function friendlyOptLabel(fieldId,opt){
-  if(fieldId==='heat_treatment') return opt.value==='tempered'?'Yes':'No';
-  if(fieldId==='gas_fill') return opt.value==='argon'?'Yes':'No';
-  const map={gbg:'Grilles Between Glass',sdl:'Simulated Divided',sculptured:'Sculptured',flat:'Flat Grids',none:'None',warm_edge:'Warm Edge'};
-  if(map[opt.value]) return map[opt.value];
-  let l=opt.label;
-  l=l.replace(/GBG — Grilles Between Glass/i,'Grilles Between Glass');
-  l=l.replace(/SDL — Simulated Divided Lights/i,'Simulated Divided');
-  l=l.replace(/IGU \(energy efficient\)/i,'Double Pane (energy efficient)');
-  return l.replace(/ \(standard\)/i,'');
-}
-
-function fieldNote(field){
-  if(field.id==='heat_treatment') return HEAT_NOTE;
-  return field.note||'';
-}
-
-function getVisibleFields(){
-  if(!prod?.fields) return [];
-  const out=[];
-  prod.fields.forEach(field=>{
-    if(field.show_if){
-      if(field.show_if.value && opts[field.show_if.field]!==field.show_if.value) return;
-      if(field.show_if.value_not && opts[field.show_if.field]===field.show_if.value_not) return;
-    }
-    const currentGridType=opts['grids']||'none';
-    if(field.options){
-      field={...field,options:field.options.filter(o=>{
-        if(o.hide_if_grids&&o.hide_if_grids.includes(currentGridType)) return false;
-        return true;
-      })};
-      if(field.options.length&&!field.options.find(o=>o.value===opts[field.id])){
-        opts[field.id]=field.options[0].value;
-      }
-    }
-    out.push(field);
-  });
-  return out;
-}
-
-function splitFields(fields){
-  const basicSet=BASIC_BY_PRODUCT[prod?.id];
-  if(basicSet){
-    return {
-      basic:fields.filter(f=>basicSet.has(f.id)),
-      advanced:fields.filter(f=>!basicSet.has(f.id)),
-    };
-  }
-  const n=Math.min(2,fields.length);
-  return {basic:fields.slice(0,n),advanced:fields.slice(n)};
-}
-
-function buildAdvSummary(advFields){
-  const bits=[];
-  const add=(label,val)=>{
-    if(val!=null&&val!=='') bits.push(`${label}: ${val}`);
-  };
-  advFields.forEach(field=>{
-    const val=opts[field.id];
-    const opt=(field.options||[]).find(o=>o.value===val);
-    if(field.id==='heat_treatment') add('Tempered',val==='tempered'?'Yes':'No');
-    else if(field.id==='spacer') add('Spacer',opt?friendlyOptLabel(field.id,opt):val);
-    else if(field.id==='gas_fill') add('Gas',val==='argon'?'Argon':'Air');
-    else if(field.id==='grids') add('Grids',val==='none'?'None':(opt?friendlyOptLabel(field.id,opt):val));
-  });
-  if(!bits.length){
-    advFields.slice(0,3).forEach(field=>{
-      const opt=(field.options||[]).find(o=>o.value===opts[field.id]);
-      if(opt) bits.push(`${friendlyFieldLabel(field)}: ${friendlyOptLabel(field.id,opt)}`);
-    });
-  }
-  return bits.length?bits.join(' · '):'Tap to customize';
-}
-
 // ── OPTIONS ───────────────────────────────────────────
-function renderFieldBlock(field,container){
-  const block=document.createElement('div');
-  const note=fieldNote(field);
-  block.innerHTML=`<div class="field-lbl mb-2">${friendlyFieldLabel(field)}${note?`<span class="block text-[10px] text-slate-400 font-normal mt-0.5 normal-case tracking-normal">${note}</span>`:''}</div><div id="f_${field.id}"></div>`;
-  container.appendChild(block);
-  const cont=block.querySelector(`#f_${field.id}`);
-
-  if(field.type==='radio'&&(field.id==='gas_fill'||field.id==='heat_treatment')){
-    const wrap=document.createElement('div');
-    wrap.className='flex gap-2';
-    const pairs=field.id==='gas_fill'
-      ?[{lbl:'No',val:'air'},{lbl:'Yes',val:'argon'}]
-      :[{lbl:'No',val:'annealed'},{lbl:'Yes',val:'tempered'}];
-    pairs.forEach(({lbl,val})=>{
-      const on=opts[field.id]===val;
-      const b=document.createElement('button');
-      b.className=`opt-btn rounded-xl flex-1 py-2.5 text-sm font-medium${on?' on':''}`;
-      b.textContent=lbl;
-      b.onclick=()=>{opts[field.id]=val;renderOpts();sched();};
-      wrap.appendChild(b);
-    });
-    cont.appendChild(wrap);
-    return;
-  }
-
-  if(field.type==='radio'){
-    if(field.options.length<=6){
-      const wrap=document.createElement('div');
-      wrap.className='flex flex-wrap gap-2';
-      field.options.forEach(o=>{
-        const b=document.createElement('button');
-        const on=opts[field.id]===o.value;
-        const add=o.price_add_sqft||o.price_add_unit||o.price_add_lf||0;
-        const unit=o.price_add_sqft?'/sf':o.price_add_lf?'/lf':o.labor_add?'+labor':'';
-        const badge=add>0?` <span class="text-xs text-slate-400">+$${add}${unit}</span>`:add<0?` <span class="text-xs text-slate-400">-$${Math.abs(add)}${unit}</span>`:'';
-        b.className=`opt-btn rounded-xl px-3 py-2 text-sm font-medium${on?' on':''}`;
-        b.innerHTML=friendlyOptLabel(field.id,o)+badge;
-        b.onclick=()=>{opts[field.id]=o.value;renderOpts();sched();};
-        wrap.appendChild(b);
-      });
-      cont.appendChild(wrap);
-    } else {
-      const sel=document.createElement('select');
-      sel.className='inp w-full px-3 py-2.5 text-sm text-slate-700';
-      field.options.forEach(o=>{
-        const op=document.createElement('option');
-        op.value=o.value; op.selected=opts[field.id]===o.value;
-        const add=o.price_add_sqft||o.price_add_unit||0;
-        op.textContent=friendlyOptLabel(field.id,o)+(add>0?` +$${add}`:add<0?` -$${Math.abs(add)}`:'');
-        sel.appendChild(op);
-      });
-      sel.onchange=()=>{opts[field.id]=sel.value;renderOpts();sched();};
-      cont.appendChild(sel);
-    }
-  } else if(field.type==='checkbox'){
-    if(!Array.isArray(opts[field.id])) opts[field.id]=[];
-    field.options.forEach(o=>{
-      const lbl=document.createElement('label');
-      lbl.className='flex items-center gap-3 py-2.5 cursor-pointer border-b border-slate-100 last:border-0';
-      const chk=opts[field.id].includes(o.value);
-      lbl.innerHTML=`<input type="checkbox" ${chk?'checked':''} class="w-4 h-4 rounded border-slate-300 text-blue-600 flex-shrink-0"><span class="text-sm text-slate-700 flex-1">${o.label}</span><span class="text-xs text-slate-400">+$${o.price_add_unit}</span>`;
-      lbl.querySelector('input').onchange=e=>{
-        if(!Array.isArray(opts[field.id])) opts[field.id]=[];
-        if(e.target.checked) opts[field.id].push(o.value);
-        else opts[field.id]=opts[field.id].filter(v=>v!==o.value);
-        sched();
-      };
-      cont.appendChild(lbl);
-    });
-  }
+function optLabel(field){
+  const val=opts[field.id];
+  const opt=(field.options||[]).find(o=>o.value===val);
+  return opt?opt.label:'—';
 }
 
 function renderOpts(){
-  const basicArea=document.getElementById('optBasicArea');
-  const advArea=document.getElementById('optAdvArea');
-  const basicSec=document.getElementById('optBasicSection');
-  const advSec=document.getElementById('optAdvSection');
-  basicArea.innerHTML='';
-  advArea.innerHTML='';
-  if(!prod?.fields){basicSec.style.display='none';advSec.style.display='none';return;}
+  const area=document.getElementById('optArea');
+  area.innerHTML='';
+  if(!prod?.fields) return;
+  prod.fields.forEach(field=>{
+    if(field.show_if&&opts[field.show_if.field]!==field.show_if.value) return;
+    const isAcc=ACCORDION_IDS.has(field.id);
+    const open=expandedOpt===field.id;
+    const sec=document.createElement('div');
+    sec.className='section-card'+(isAcc?' !py-3':'');
 
-  const visible=getVisibleFields();
-  const {basic,advanced}=splitFields(visible);
+    if(isAcc){
+      sec.innerHTML=`
+        <button type="button" class="acc-header w-full flex items-center gap-3 text-left">
+          <div class="flex-1 min-w-0">
+            <div class="section-title normal-case tracking-normal text-slate-500 mb-0.5">${field.label}</div>
+            <div class="text-sm font-medium text-slate-800 truncate">${optLabel(field)}</div>
+          </div>
+          <svg class="acc-chevron w-4 h-4 text-slate-400 flex-shrink-0${open?' open':''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="acc-body${open?'':' hidden'} pt-3 mt-3 border-t border-slate-100" id="f_${field.id}"></div>`;
+      area.appendChild(sec);
+      sec.querySelector('.acc-header').onclick=()=>{
+        expandedOpt=expandedOpt===field.id?null:field.id;
+        renderOpts();
+      };
+    } else {
+      sec.innerHTML=`<div class="section-hd !mb-3"><span class="section-title normal-case tracking-normal">${field.label}${field.note?`<span class="text-slate-300 font-normal normal-case ml-1">${field.note}</span>`:''}</span></div><div id="f_${field.id}"></div>`;
+      area.appendChild(sec);
+    }
 
-  basicSec.style.display=basic.length?'block':'none';
-  basic.forEach(f=>renderFieldBlock(f,basicArea));
+    const cont=document.getElementById(`f_${field.id}`);
 
-  advSec.style.display=advanced.length?'block':'none';
-  if(!advanced.length) return;
-
-  document.getElementById('advSummary').textContent=buildAdvSummary(advanced);
-  const chevron=document.getElementById('advChevron');
-  const advBody=document.getElementById('optAdvArea');
-  chevron.classList.toggle('open',advancedOpen);
-  advBody.classList.toggle('hidden',!advancedOpen);
-  advanced.forEach(f=>renderFieldBlock(f,advArea));
+    if(field.type==='radio'){
+      if(field.options.length<=6){
+        const wrap=document.createElement('div');
+        wrap.className='flex flex-wrap gap-2';
+        field.options.forEach(o=>{
+          const b=document.createElement('button');
+          const on=opts[field.id]===o.value;
+          const add=o.price_add_sqft||o.price_add_unit||o.price_add_lf||0;
+          const unit=o.price_add_sqft?'/sf':o.price_add_lf?'/lf':o.labor_add?'+labor':'';
+          const badge=add>0?` <span class="text-xs text-slate-400">+$${add}${unit}</span>`:add<0?` <span class="text-xs text-slate-400">-$${Math.abs(add)}${unit}</span>`:'';
+          b.className=`opt-btn rounded-xl px-3 py-2 text-sm font-medium${on?' on':''}`;
+          b.innerHTML=o.label+badge;
+          b.onclick=()=>{opts[field.id]=o.value;expandedOpt=null;renderOpts();sched();};
+          wrap.appendChild(b);
+        });
+        cont.appendChild(wrap);
+      } else {
+        const sel=document.createElement('select');
+        sel.className='inp w-full px-3 py-2.5 text-sm text-slate-700';
+        field.options.forEach(o=>{
+          const op=document.createElement('option');
+          op.value=o.value; op.selected=opts[field.id]===o.value;
+          const add=o.price_add_sqft||o.price_add_unit||0;
+          op.textContent=o.label+(add>0?` +$${add}`:add<0?` -$${Math.abs(add)}`:'');
+          sel.appendChild(op);
+        });
+        sel.onchange=()=>{opts[field.id]=sel.value;renderOpts();sched();};
+        cont.appendChild(sel);
+      }
+    } else if(field.type==='checkbox'){
+      if(!Array.isArray(opts[field.id])) opts[field.id]=[];
+      field.options.forEach(o=>{
+        const lbl=document.createElement('label');
+        lbl.className='flex items-center gap-3 py-2.5 cursor-pointer border-b border-slate-100 last:border-0';
+        const chk=opts[field.id].includes(o.value);
+        lbl.innerHTML=`<input type="checkbox" ${chk?'checked':''} class="w-4 h-4 rounded border-slate-300 text-blue-600 flex-shrink-0"><span class="text-sm text-slate-700 flex-1">${o.label}</span><span class="text-xs text-slate-400">+$${o.price_add_unit}</span>`;
+        lbl.querySelector('input').onchange=e=>{
+          if(!Array.isArray(opts[field.id])) opts[field.id]=[];
+          if(e.target.checked) opts[field.id].push(o.value);
+          else opts[field.id]=opts[field.id].filter(v=>v!==o.value);
+          sched();
+        };
+        cont.appendChild(lbl);
+      });
+    }
+  });
 }
-
-document.getElementById('advAccordionBtn').onclick=()=>{
-  advancedOpen=!advancedOpen;
-  renderOpts();
-};
 
 // ── DIMS ──────────────────────────────────────────────
 function bindDims(){
@@ -625,16 +451,6 @@ function bindDims(){
     document.getElementById(id).addEventListener('input',()=>{updArea();sched();});
     document.getElementById(id).addEventListener('change',()=>{updArea();sched();});
   });
-  updArea();
-}
-
-function setQuickSize(w,h){
-  document.getElementById('wIn').value=w;
-  document.getElementById('wFrac').value='0';
-  document.getElementById('hIn').value=h;
-  document.getElementById('hFrac').value='0';
-  updArea();
-  sched();
 }
 
 function updArea(){
@@ -642,17 +458,13 @@ function updArea(){
   const h=parseFloat(document.getElementById('hIn').value||0)+FRAC[document.getElementById('hFrac').value];
   const q=1;
   const note=document.getElementById('minChargeNote');
-  const preview=document.getElementById('areaPreview');
   if(w>0&&h>0){
     const sqft=w/12*h/12;
     if(note) note.classList.toggle('hidden', sqft >= 2.0);
     const a=(w/12*h/12*q).toFixed(2);
     const wF=document.getElementById('wFrac').value,hF=document.getElementById('hFrac').value;
-    const wTxt=`${document.getElementById('wIn').value}"${wF!='0'?' '+wF+'"':''}`;
-    const hTxt=`${document.getElementById('hIn').value}"${hF!='0'?' '+hF+'"':''}`;
-    preview.innerHTML=`<div class="area-val">${a} sq ft</div><div class="area-dim">${wTxt} × ${hTxt}</div>`;
-  } else {
-    preview.innerHTML='<div class="area-val">—</div><div class="area-dim">Enter width &amp; height</div>';
+    document.getElementById('areaPreview').textContent=
+      `${document.getElementById('wIn').value}"${wF!='0'?' '+wF+'"':''} × ${document.getElementById('hIn').value}"${hF!='0'?' '+hF+'"':''}${q>1?' × '+q:''}  =  ${a} sq ft`;
   }
 }
 
@@ -674,9 +486,7 @@ function onZip(v){
 // ── CHOICE BUTTONS ────────────────────────────────────
 function setOpt(key,val,btn){
   state[key]=val;
-  btn.closest('div').querySelectorAll('.opt-btn').forEach(b=>{
-    b.classList.remove('on');
-  });
+  btn.closest('div').querySelectorAll('.opt-btn').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on');
   sched();
 }
@@ -711,7 +521,7 @@ async function doCalc(){
     const hwSpread=hwMid<600?0.10:0.15;
     const hwRangeMin=smartRoundHw(hwMid*(1-hwSpread));
     const hwRangeMax=smartRoundHw(hwMid*(1+hwSpread));
-    document.getElementById('resultArea').innerHTML=`<div class="result-in bg-white rounded-2xl border-2 border-blue-600 p-4 shadow-md"><div class="text-xs text-gray-500 mb-1">${prod.label}${qtyNote}</div><div class="text-3xl font-bold text-blue-600 mb-0.5">$${hwMid.toLocaleString()}</div><div class="text-sm text-gray-500 mb-1">📞 Озвучивайте: <span class="font-semibold text-blue-600">$${hwRangeMin.toLocaleString()} – $${hwRangeMax.toLocaleString()}</span></div>${minNote}${floorNote}<div class="text-xs text-gray-400 mb-3 mt-1">Estimate total</div><div class="flex gap-2"><button onclick="navigator.clipboard.writeText('${prod.label}: $${hwMid}\nRange: $${hwRangeMin}–$${hwRangeMax}\nFast Glass & Windows — 213-566-8886').then(()=>{})" class="flex-1 bg-blue-600 text-white rounded-xl py-2.5 text-sm font-semibold">📋 Copy</button><button onclick="addHwToCart('${prod.label}',${hwMid},${hwRangeMin},${hwRangeMax})" class="flex-1 bg-green-600 text-white rounded-xl py-2.5 text-sm font-semibold">➕ Добавить</button></div></div>`;
+    document.getElementById('resultArea').innerHTML=`<div class="result-in bg-white rounded-2xl border-2 border-blue-600 p-4 shadow-md"><div class="text-xs text-gray-500 mb-1">${prod.label}${qtyNote}</div><div class="text-3xl font-bold text-blue-600 mb-0.5">$${hwMid.toLocaleString()}</div><div class="text-xs text-gray-400 mb-1">📞 Озвучивайте: $${hwRangeMin.toLocaleString()} – $${hwRangeMax.toLocaleString()}</div>${minNote}${floorNote}<div class="text-xs text-gray-400 mb-3 mt-1">Estimate total</div><div class="flex gap-2"><button onclick="navigator.clipboard.writeText('${prod.label}: $${hwMid}\nRange: $${hwRangeMin}–$${hwRangeMax}\nFast Glass & Windows — 213-566-8886').then(()=>{})" class="flex-1 bg-blue-600 text-white rounded-xl py-2.5 text-sm font-semibold">📋 Copy</button><button onclick="addHwToCart('${prod.label}',${hwMid},${hwRangeMin},${hwRangeMax})" class="flex-1 bg-green-600 text-white rounded-xl py-2.5 text-sm font-semibold">➕ Добавить</button></div></div>`;
     document.getElementById('similarArea').innerHTML='';
     document.getElementById('marketBadge').classList.add('hidden');
     return;
@@ -733,7 +543,6 @@ async function doCalc(){
     notes:document.getElementById('notes').value,
     // Calculate total options surcharge on frontend (we know the product fields)
     options_add_sqft: calcOptionsSurcharge(),
-    product_min_charge: prod.min_charge || 0,
   };
   try{
     const d=await fj('/api/calculate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -764,7 +573,7 @@ function showResult(d){
   <div class="result-in bg-white rounded-2xl border-2 border-blue-600 p-4 shadow-md">
     <div class="text-xs text-gray-500 mb-1">${d.service_name} · ${d.total_area_sqft} sqft · ${d.location||'Local'}</div>
     <div class="text-3xl font-bold text-blue-600 mb-0.5">$${midPrice.toLocaleString()}</div>
-    <div class="text-sm text-gray-500 mb-1">📞 Озвучивайте клиенту: <span class="font-semibold text-blue-600">$${rangeMin.toLocaleString()} – $${rangeMax.toLocaleString()}</span></div>
+    <div class="text-xs text-gray-400 mb-1">📞 Озвучивайте клиенту: $${rangeMin.toLocaleString()} – $${rangeMax.toLocaleString()}</div>
     <div id="marketBadge" class="hidden text-sm font-semibold rounded-xl px-3 py-2 mb-2 border-2"></div>
     ${techRec?`<div class="bg-amber-50 border border-amber-300 rounded-xl px-3 py-1.5 text-xs text-amber-800 mb-2">${techRec}</div>`:''}
     <div class="bg-gray-50 rounded-xl p-3 space-y-1.5 text-sm mb-3">
@@ -940,7 +749,7 @@ function renderCart(){
   totalMid=sr(totalMid); totalLo=sr(totalLo); totalHi=sr(totalHi);
   document.getElementById('cartTotal').textContent='$'+totalMid.toLocaleString();
   const sp2=totalMid<600?0.10:0.15;
-  document.getElementById('cartRange').innerHTML=`📞 Озвучивайте: <span class="font-semibold text-blue-600">$${sr(totalMid*(1-sp2)).toLocaleString()} – $${sr(totalMid*(1+sp2)).toLocaleString()}</span>`;
+  document.getElementById('cartRange').textContent=`📞 Озвучивайте: $${sr(totalMid*(1-sp2)).toLocaleString()} – $${sr(totalMid*(1+sp2)).toLocaleString()}`;
 }
 
 function copyCart(){
