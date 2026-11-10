@@ -142,7 +142,11 @@
         <p class="text-[10px] text-slate-500 leading-tight truncate">Fast Glass &amp; Windows · Los Angeles</p>
       </div>
     </div>
-    <a href="/admin" class="flex-shrink-0 text-[10px] md:text-xs font-medium text-slate-400 hover:text-blue-600 border border-slate-200 rounded-lg px-2 py-1.5 transition" aria-label="Admin">Admin</a>
+    <div class="flex items-center gap-1.5 flex-shrink-0">
+      <span id="authChip" class="hidden text-[10px] text-slate-500 max-w-[110px] truncate"></span>
+      <a id="portalLink" href="/login" class="text-[10px] md:text-xs font-medium text-slate-400 hover:text-blue-600 border border-slate-200 rounded-lg px-2 py-1.5 transition">Sign in</a>
+      <a id="adminNav" href="/admin" class="hidden text-[10px] md:text-xs font-medium text-slate-400 hover:text-blue-600 border border-slate-200 rounded-lg px-2 py-1.5 transition">Admin</a>
+    </div>
   </div>
 </header>
 
@@ -324,8 +328,50 @@ const FRAC={'0':0,'1/8':.125,'1/4':.25,'3/8':.375,'1/2':.5,'5/8':.625,'3/4':.75,
 let cats=[], prod=null, opts={}, state={floor:1,techs:1,urgency:'normal'}, timer=null, hwQty=1, expandedOpt=null;
 const ACCORDION_IDS=new Set(['igu_package','heat_treatment','spacer','gas_fill','grids']);
 let cart=[];  // [{label, midPrice, rangeMin, rangeMax, area, qty}]
+const TOKEN_KEY='fg_admin_token';
+const USER_KEY='fg_admin_user';
+let authUser=null;
+let lastSave=null;
+
+async function initAuth(){
+  const tok=sessionStorage.getItem(TOKEN_KEY)||'';
+  if(!tok){return;}
+  try{
+    const me=await fetch(API+'/api/admin/auth/me',{headers:{Authorization:`Bearer ${tok}`}}).then(r=>{if(!r.ok)throw 0;return r.json();});
+    authUser=me;
+    const chip=document.getElementById('authChip');
+    chip.textContent=me.display_name||me.user_id;
+    chip.classList.remove('hidden');
+    const link=document.getElementById('portalLink');
+    link.href='/portal';
+    link.textContent='My estimates';
+    if(me.role==='superadmin') document.getElementById('adminNav').classList.remove('hidden');
+  }catch{
+    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(USER_KEY);
+  }
+}
+
+async function saveCurrentEstimate(){
+  const tok=sessionStorage.getItem(TOKEN_KEY)||'';
+  if(!tok){location.href='/login';return;}
+  if(!lastSave){alert('Calculate first');return;}
+  try{
+    const r=await fetch(API+'/api/estimates',{
+      method:'POST',
+      headers:{'Content-Type':'application/json',Authorization:`Bearer ${tok}`},
+      body:JSON.stringify(lastSave),
+    });
+    const j=await r.json().catch(()=>({}));
+    if(r.status===401){location.href='/login';return;}
+    if(!r.ok) throw new Error(j.detail||'Save failed');
+    const btn=document.getElementById('saveEstBtn');
+    if(btn){btn.textContent='✅ Saved';setTimeout(()=>{btn.textContent='💾 Save';},1500);}
+  }catch(e){alert(e.message);}
+}
 
 async function init(){
+  await initAuth();
   try{
     cats=await fj('/api/products');
     renderCats();
@@ -563,10 +609,16 @@ async function doCalc(){
     const hwSpread=hwMid<600?0.10:0.15;
     const hwRangeMin=smartRoundHw(hwMid*(1-hwSpread));
     const hwRangeMax=smartRoundHw(hwMid*(1+hwSpread));
+    lastSave={
+      title:prod.label+(qty>1?` ×${qty}`:''),
+      mid_price:hwMid, range_min:hwRangeMin, range_max:hwRangeMax,
+      notes:document.getElementById('notes').value||'',
+      payload:{kind:'hardware', product_id:prod.id, qty, floor:state.floor, mid:hwMid, range:[hwRangeMin,hwRangeMax]}
+    };
     document.getElementById('resultArea').innerHTML=`<div class="result-in bg-white rounded-2xl border-2 border-blue-600 p-4 shadow-md"><div class="text-xs text-gray-500 mb-1">${prod.label}${qtyNote}</div><div class="text-3xl font-bold text-blue-600 mb-0.5">$${hwMid.toLocaleString()}</div><div class="bg-blue-50 border-l-4 border-blue-500 px-4 py-3 mb-3 rounded-lg">
         <div class="text-sm font-semibold text-blue-700 mb-1">📞 Озвучивайте клиенту</div>
         <div class="text-2xl font-bold text-blue-600">$${hwRangeMin.toLocaleString()} – $${hwRangeMax.toLocaleString()}</div>
-      </div>${minNote}${floorNote}<div class="text-xs text-gray-400 mb-3 mt-1">Estimate total</div><div class="flex gap-2"><button onclick="navigator.clipboard.writeText('${prod.label}: $${hwMid}\nRange: $${hwRangeMin}–$${hwRangeMax}\nFast Glass & Windows — 213-566-8886').then(()=>{})" class="flex-1 bg-blue-600 text-white rounded-xl py-2.5 text-sm font-semibold">📋 Copy</button><button onclick="addHwToCart('${prod.label}',${hwMid},${hwRangeMin},${hwRangeMax})" class="flex-1 bg-green-600 text-white rounded-xl py-2.5 text-sm font-semibold">➕ Добавить</button></div></div>`;
+      </div>${minNote}${floorNote}<div class="text-xs text-gray-400 mb-3 mt-1">Estimate total</div><div class="flex gap-2 flex-wrap"><button onclick="navigator.clipboard.writeText('${prod.label}: $${hwMid}\\nRange: $${hwRangeMin}–$${hwRangeMax}\\nFast Glass & Windows — 213-566-8886').then(()=>{})" class="flex-1 min-w-[30%] bg-blue-600 text-white rounded-xl py-2.5 text-sm font-semibold">📋 Copy</button><button onclick="addHwToCart('${prod.label}',${hwMid},${hwRangeMin},${hwRangeMax})" class="flex-1 min-w-[30%] bg-green-600 text-white rounded-xl py-2.5 text-sm font-semibold">➕ Добавить</button><button id="saveEstBtn" onclick="saveCurrentEstimate()" class="flex-1 min-w-[30%] bg-slate-800 text-white rounded-xl py-2.5 text-sm font-semibold">💾 Save</button></div></div>`;
     document.getElementById('similarArea').innerHTML='';
     document.getElementById('marketBadge').classList.add('hidden');
     return;
@@ -634,12 +686,23 @@ function showResult(d){
       <div class="border-t pt-1.5 flex justify-between font-semibold"><span>Total</span><span>$${midPrice.toLocaleString()}</span></div>
     </div>
     ${notes}
-    <div class="flex gap-2">
-      <button onclick="copyRes()" class="flex-1 bg-blue-600 text-white rounded-xl py-2.5 text-sm font-semibold">📋 Copy</button>
-      <button onclick="addToCart()" class="flex-1 bg-green-600 text-white rounded-xl py-2.5 text-sm font-semibold">➕ Добавить</button>
+    <div class="flex gap-2 flex-wrap">
+      <button onclick="copyRes()" class="flex-1 min-w-[30%] bg-blue-600 text-white rounded-xl py-2.5 text-sm font-semibold">📋 Copy</button>
+      <button onclick="addToCart()" class="flex-1 min-w-[30%] bg-green-600 text-white rounded-xl py-2.5 text-sm font-semibold">➕ Добавить</button>
+      <button id="saveEstBtn" onclick="saveCurrentEstimate()" class="flex-1 min-w-[30%] bg-slate-800 text-white rounded-xl py-2.5 text-sm font-semibold">💾 Save</button>
     </div>
   </div>`;
   window._r=d; window._rl=d.service_name; window._midPrice=midPrice;
+  lastSave={
+    title:d.service_name,
+    mid_price:midPrice, range_min:rangeMin, range_max:rangeMax,
+    notes:document.getElementById('notes').value||'',
+    payload:{kind:'glass', result:d, product_id:prod&&prod.id, options:opts, state, dims:{
+      w:document.getElementById('wIn').value, wFrac:document.getElementById('wFrac').value,
+      h:document.getElementById('hIn').value, hFrac:document.getElementById('hFrac').value,
+      zip:document.getElementById('zip').value
+    }}
+  };
   showMarketBadge(d);
 }
 

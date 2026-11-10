@@ -64,11 +64,26 @@ def ensure_admin_tables() -> None:
             email TEXT NOT NULL UNIQUE,
             password_hash TEXT NOT NULL,
             salt TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'user',
+            display_name TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
         """
     )
+    cols = {row[1] for row in c.execute("PRAGMA table_info(admin_users)").fetchall()}
+    if "role" not in cols:
+        c.execute("ALTER TABLE admin_users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'")
+        c.execute(
+            """
+            UPDATE admin_users
+            SET role = 'superadmin'
+            WHERE id = (SELECT MIN(id) FROM admin_users)
+            """
+        )
+    if "display_name" not in cols:
+        c.execute("ALTER TABLE admin_users ADD COLUMN display_name TEXT")
+
     c.execute(
         """
         CREATE TABLE IF NOT EXISTS admin_sessions (
@@ -102,15 +117,37 @@ def ensure_admin_tables() -> None:
         )
         """
     )
+    c.execute(
+        """
+        CREATE TABLE IF NOT EXISTS estimates (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_pk INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'saved',
+            mid_price REAL,
+            range_min REAL,
+            range_max REAL,
+            payload_json TEXT NOT NULL,
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            signed_at TEXT,
+            signed_by_pk INTEGER,
+            FOREIGN KEY(user_pk) REFERENCES admin_users(id),
+            FOREIGN KEY(signed_by_pk) REFERENCES admin_users(id)
+        )
+        """
+    )
     conn.commit()
     conn.close()
 
 
 def seed_admin_user_from_env() -> None:
-    """Create first admin from ADMIN_EMAIL + ADMIN_PASSWORD (+ optional ADMIN_USER_ID)."""
+    """Create first superadmin from ADMIN_EMAIL + ADMIN_PASSWORD (+ optional ADMIN_USER_ID)."""
     email = (os.getenv("ADMIN_EMAIL") or "").strip().lower()
     password = os.getenv("ADMIN_PASSWORD") or ""
     user_id = (os.getenv("ADMIN_USER_ID") or "alex").strip().lower()
+    display = (os.getenv("ADMIN_DISPLAY_NAME") or "Alex").strip()
     if not email or not password:
         return
 
@@ -124,13 +161,88 @@ def seed_admin_user_from_env() -> None:
     now = _iso(_utcnow())
     conn.execute(
         """
-        INSERT INTO admin_users (user_id, email, password_hash, salt, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO admin_users
+        (user_id, email, password_hash, salt, role, display_name, created_at, updated_at)
+        VALUES (?, ?, ?, ?, 'superadmin', ?, ?, ?)
         """,
-        (user_id, email, pw_hash, salt, now, now),
+        (user_id, email, pw_hash, salt, display, now, now),
     )
     conn.commit()
     conn.close()
+
+
+def is_superadmin(user) -> bool:
+    return bool(user) and (user["role"] if "role" in user.keys() else "user") == "superadmin"
+
+
+def public_user(user) -> dict:
+    return {
+        "id": user["id"],
+        "user_id": user["user_id"],
+        "email": user["email"],
+        "role": user["role"] if "role" in user.keys() else "user",
+        "display_name": user["display_name"] if "display_name" in user.keys() else None,
+    }
+
+
+def create_user(
+    user_id: str,
+    email: str,
+    role: str = "user",
+    display_name: str = "",
+    password: Optional[str] = None,
+    send_invite: bool = True,
+) -> dict:
+    user_id = (user_id or "").strip().lower()
+    email = (email or "").strip().lower()
+    role = role if role in ("superadmin", "user") else "user"
+    if not user_id or not email:
+        raise ValueError("user_id and email are required")
+    if find_user_by_login(user_id) or find_user_by_email(email):
+        raise ValueError("User ID or email already exists")
+
+    temp = password or secrets.token_urlsafe(12)
+    pw_hash, salt = hash_password(temp)
+    now = _iso(_utcnow())
+    conn = get_db()
+    cur = conn.execute(
+        """
+        INSERT INTO admin_users
+        (user_id, email, password_hash, salt, role, display_name, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (user_id, email, pw_hash, salt, role, display_name or user_id, now, now),
+    )
+    pk = cur.lastrowid
+    conn.commit()
+    conn.close()
+
+    invite_sent = False
+    if send_invite:
+        token = create_recovery_token(pk, "reset_password")
+        invite_sent = invite_set_password_email(email, user_id, token)
+
+    return {
+        "id": pk,
+        "user_id": user_id,
+        "email": email,
+        "role": role,
+        "display_name": display_name or user_id,
+        "invite_sent": invite_sent,
+    }
+
+
+def list_users() -> list:
+    conn = get_db()
+    rows = conn.execute(
+        """
+        SELECT id, user_id, email, role, display_name, created_at, updated_at
+        FROM admin_users
+        ORDER BY role DESC, user_id ASC
+        """
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
 
 
 def check_rate_limit(bucket: str) -> bool:
@@ -371,24 +483,42 @@ def send_email(to_email: str, subject: str, body: str) -> bool:
     return True
 
 
-def password_reset_email(email: str, user_id: str, token: str) -> bool:
+def _login_link(token: Optional[str] = None) -> str:
     base = app_base_url()
-    link = f"{base}/admin?reset={token}" if base else f"/admin?reset={token}"
+    path = f"/login?reset={token}" if token else "/login"
+    return f"{base}{path}" if base else path
+
+
+def password_reset_email(email: str, user_id: str, token: str) -> bool:
+    link = _login_link(token)
     body = (
         f"Hello,\n\n"
-        f"Password reset was requested for ROMI Estimate admin (user ID: {user_id}).\n"
-        f"Open this one-time link within {RESET_TOKEN_MINUTES} minutes:\n\n"
+        f"Password reset was requested for ROMI Estimate (User ID: {user_id}).\n"
+        f"Open this one-time link within {RESET_TOKEN_MINUTES} minutes, then enter your NEW password:\n\n"
         f"{link}\n\n"
         f"If you did not request this, ignore this email.\n"
     )
     return send_email(email, "ROMI Estimate — password reset", body)
 
 
+def invite_set_password_email(email: str, user_id: str, token: str) -> bool:
+    link = _login_link(token)
+    body = (
+        f"Hello,\n\n"
+        f"Your ROMI Estimate account was created.\n"
+        f"User ID: {user_id}\n"
+        f"Set your password with this one-time link (valid {RESET_TOKEN_MINUTES} minutes):\n\n"
+        f"{link}\n\n"
+        f"After that you can sign in at /login and open My Estimates.\n"
+    )
+    return send_email(email, "ROMI Estimate — set your password", body)
+
+
 def user_id_reminder_email(email: str, user_id: str) -> bool:
     body = (
         f"Hello,\n\n"
-        f"Your ROMI Estimate admin User ID is: {user_id}\n"
-        f"Sign in at /admin with this User ID (or this email) and your password.\n\n"
+        f"Your ROMI Estimate User ID is: {user_id}\n"
+        f"Sign in at /login with this User ID (or this email) and your password.\n\n"
         f"If you did not request this, ignore this email.\n"
     )
     return send_email(email, "ROMI Estimate — User ID reminder", body)
