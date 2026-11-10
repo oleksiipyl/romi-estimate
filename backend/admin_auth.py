@@ -643,7 +643,7 @@ def set_password(user_pk: int, new_password: str) -> None:
 
 
 def mail_configured() -> bool:
-    """True if Resend API or SMTP can send mail."""
+    """True if Resend API or SMTP credentials are present (not a live health check)."""
     if os.getenv("RESEND_API_KEY") and (os.getenv("SMTP_FROM") or os.getenv("MAIL_FROM")):
         return True
     return bool(os.getenv("SMTP_HOST") and (os.getenv("SMTP_FROM") or os.getenv("MAIL_FROM")))
@@ -663,13 +663,32 @@ def app_base_url() -> str:
     return f"https://{raw}"
 
 
-def send_email(to_email: str, subject: str, body: str) -> bool:
+def new_mail_correlation_id() -> str:
+    return secrets.token_hex(8)
+
+
+def log_mail_event(event: str, *, category: str, correlation_id: str = "", detail: str = "") -> None:
+    """Operator-safe mail diagnostics. Never log address, subject, body, token, or raw provider errors."""
+    parts = [f"[admin_auth] mail event={event}", f"category={category}"]
+    if correlation_id:
+        parts.append(f"correlation_id={correlation_id}")
+    if detail:
+        # Only allow short allow-listed detail tokens (status codes, stage names).
+        safe = "".join(ch for ch in detail if ch.isalnum() or ch in ("_", "-", "=", "."))[:64]
+        if safe:
+            parts.append(f"detail={safe}")
+    print(" ".join(parts))
+
+
+def send_email(to_email: str, subject: str, body: str, *, correlation_id: str = "") -> bool:
     from_addr = (os.getenv("SMTP_FROM") or os.getenv("MAIL_FROM") or "").strip()
     resend_key = (os.getenv("RESEND_API_KEY") or "").strip()
+    cid = correlation_id or new_mail_correlation_id()
 
     # Prefer Resend HTTP API when configured (simpler on Railway than SMTP)
     if resend_key and from_addr:
         import json as _json
+        import urllib.error
         import urllib.request
 
         payload = _json.dumps(
@@ -693,17 +712,39 @@ def send_email(to_email: str, subject: str, body: str) -> bool:
             with urllib.request.urlopen(req, timeout=20) as resp:
                 ok = 200 <= resp.status < 300
                 if not ok:
-                    print(f"[admin_auth] Resend failed status={resp.status}")
+                    log_mail_event(
+                        "send",
+                        category="provider_http",
+                        correlation_id=cid,
+                        detail=f"status={resp.status}",
+                    )
+                else:
+                    log_mail_event("send", category="provider_accepted", correlation_id=cid)
                 return ok
-        except Exception as e:
-            print(f"[admin_auth] Resend error: {e}")
+        except TimeoutError:
+            log_mail_event("send", category="provider_timeout", correlation_id=cid)
+            return False
+        except urllib.error.HTTPError as e:
+            log_mail_event(
+                "send",
+                category="provider_http",
+                correlation_id=cid,
+                detail=f"status={getattr(e, 'code', 0)}",
+            )
+            return False
+        except urllib.error.URLError as e:
+            reason = getattr(e, "reason", None)
+            cat = "provider_timeout" if isinstance(reason, TimeoutError) else "provider_exception"
+            log_mail_event("send", category=cat, correlation_id=cid)
+            return False
+        except Exception:
+            log_mail_event("send", category="provider_exception", correlation_id=cid)
             return False
 
     host = os.getenv("SMTP_HOST")
     if not host or not from_addr:
-        # Ops visibility only — never return link to client
-        print(f"[admin_auth] Mail not configured (set RESEND_API_KEY+MAIL_FROM or SMTP_*). Would email {to_email}: {subject}")
-        print(body)
+        # Ops visibility only — never print recipient, subject, or body
+        log_mail_event("send", category="not_configured", correlation_id=cid)
         return False
 
     port = int(os.getenv("SMTP_PORT") or "587")
@@ -718,13 +759,27 @@ def send_email(to_email: str, subject: str, body: str) -> bool:
     msg.set_content(body)
 
     context = ssl.create_default_context()
-    with smtplib.SMTP(host, port, timeout=20) as server:
-        if use_tls:
-            server.starttls(context=context)
-        if user:
-            server.login(user, password)
-        server.send_message(msg)
-    return True
+    try:
+        with smtplib.SMTP(host, port, timeout=20) as server:
+            if use_tls:
+                server.starttls(context=context)
+            if user:
+                server.login(user, password)
+            server.send_message(msg)
+        log_mail_event("send", category="provider_accepted", correlation_id=cid)
+        return True
+    except (TimeoutError, smtplib.SMTPServerDisconnected):
+        log_mail_event("send", category="provider_timeout", correlation_id=cid)
+        return False
+    except smtplib.SMTPException:
+        log_mail_event("send", category="provider_exception", correlation_id=cid)
+        return False
+    except OSError:
+        log_mail_event("send", category="provider_exception", correlation_id=cid)
+        return False
+    except Exception:
+        log_mail_event("send", category="provider_exception", correlation_id=cid)
+        return False
 
 
 def _login_link(token: Optional[str] = None) -> str:
@@ -733,7 +788,7 @@ def _login_link(token: Optional[str] = None) -> str:
     return f"{base}{path}" if base else path
 
 
-def password_reset_email(email: str, user_id: str, token: str) -> bool:
+def password_reset_email(email: str, user_id: str, token: str, *, correlation_id: str = "") -> bool:
     link = _login_link(token)
     body = (
         f"Hello,\n\n"
@@ -742,10 +797,10 @@ def password_reset_email(email: str, user_id: str, token: str) -> bool:
         f"{link}\n\n"
         f"If you did not request this, ignore this email.\n"
     )
-    return send_email(email, "ROMI Estimate — password reset", body)
+    return send_email(email, "ROMI Estimate — password reset", body, correlation_id=correlation_id)
 
 
-def invite_set_password_email(email: str, user_id: str, token: str) -> bool:
+def invite_set_password_email(email: str, user_id: str, token: str, *, correlation_id: str = "") -> bool:
     link = _login_link(token)
     body = (
         f"Hello,\n\n"
@@ -755,14 +810,51 @@ def invite_set_password_email(email: str, user_id: str, token: str) -> bool:
         f"{link}\n\n"
         f"After that you can sign in at /login and open My Estimates.\n"
     )
-    return send_email(email, "ROMI Estimate — set your password", body)
+    return send_email(email, "ROMI Estimate — set your password", body, correlation_id=correlation_id)
 
 
-def user_id_reminder_email(email: str, user_id: str) -> bool:
+def user_id_reminder_email(email: str, user_id: str, *, correlation_id: str = "") -> bool:
     body = (
         f"Hello,\n\n"
         f"Your ROMI Estimate User ID is: {user_id}\n"
         f"Sign in at /login with this User ID (or this email) and your password.\n\n"
         f"If you did not request this, ignore this email.\n"
     )
-    return send_email(email, "ROMI Estimate — User ID reminder", body)
+    return send_email(email, "ROMI Estimate — User ID reminder", body, correlation_id=correlation_id)
+
+
+def run_password_reset_delivery(user_pk: int, email: str, user_id: str, correlation_id: str) -> None:
+    """Background recovery mail: token + send. Failures stay in operator logs only."""
+    try:
+        token = create_recovery_token(user_pk, "reset_password")
+        ok = password_reset_email(email, user_id, token, correlation_id=correlation_id)
+        if not ok:
+            log_mail_event(
+                "recovery_password",
+                category="provider_failed",
+                correlation_id=correlation_id,
+            )
+    except Exception:
+        log_mail_event(
+            "recovery_password",
+            category="provider_exception",
+            correlation_id=correlation_id,
+        )
+
+
+def run_user_id_reminder_delivery(email: str, user_id: str, correlation_id: str) -> None:
+    """Background User ID reminder. Failures stay in operator logs only."""
+    try:
+        ok = user_id_reminder_email(email, user_id, correlation_id=correlation_id)
+        if not ok:
+            log_mail_event(
+                "recovery_user_id",
+                category="provider_failed",
+                correlation_id=correlation_id,
+            )
+    except Exception:
+        log_mail_event(
+            "recovery_user_id",
+            category="provider_exception",
+            correlation_id=correlation_id,
+        )
