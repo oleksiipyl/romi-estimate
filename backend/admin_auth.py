@@ -142,24 +142,43 @@ def ensure_admin_tables() -> None:
     conn.close()
 
 
+# Product owner defaults (override via Railway env if needed)
+DEFAULT_OWNER_EMAIL = "oleksii.pyl@gmail.com"
+DEFAULT_OWNER_USER_ID = "oleksii.pyl"
+DEFAULT_OWNER_DISPLAY = "Oleksii Pyl"
+
+
 def seed_admin_user_from_env() -> None:
-    """Create first superadmin from ADMIN_EMAIL + ADMIN_PASSWORD (+ optional ADMIN_USER_ID)."""
-    email = (os.getenv("ADMIN_EMAIL") or "").strip().lower()
-    password = os.getenv("ADMIN_PASSWORD") or ""
-    user_id = (os.getenv("ADMIN_USER_ID") or "alex").strip().lower()
-    display = (os.getenv("ADMIN_DISPLAY_NAME") or "Alex").strip()
-    if not email or not password:
+    """Ensure product-owner superadmin exists.
+
+    Identity defaults to oleksii.pyl / oleksii.pyl@gmail.com.
+    Password: ADMIN_PASSWORD if set, otherwise a random one-time secret;
+    an invite/reset link is emailed (or logged) so the owner can set a password.
+    """
+    email = (os.getenv("ADMIN_EMAIL") or DEFAULT_OWNER_EMAIL).strip().lower()
+    user_id = (os.getenv("ADMIN_USER_ID") or DEFAULT_OWNER_USER_ID).strip().lower()
+    display = (os.getenv("ADMIN_DISPLAY_NAME") or DEFAULT_OWNER_DISPLAY).strip()
+    password = os.getenv("ADMIN_PASSWORD") or secrets.token_urlsafe(18)
+    if not email or not user_id:
         return
 
-    conn = get_db()
-    row = conn.execute("SELECT id FROM admin_users LIMIT 1").fetchone()
-    if row:
-        conn.close()
+    existing = find_user_by_email(email) or find_user_by_login(user_id)
+    if existing:
+        # Keep identity; promote to superadmin if needed
+        if (existing["role"] if "role" in existing.keys() else "user") != "superadmin":
+            conn = get_db()
+            conn.execute(
+                "UPDATE admin_users SET role = 'superadmin', updated_at = ? WHERE id = ?",
+                (_iso(_utcnow()), existing["id"]),
+            )
+            conn.commit()
+            conn.close()
         return
 
     pw_hash, salt = hash_password(password)
     now = _iso(_utcnow())
-    conn.execute(
+    conn = get_db()
+    cur = conn.execute(
         """
         INSERT INTO admin_users
         (user_id, email, password_hash, salt, role, display_name, created_at, updated_at)
@@ -167,8 +186,14 @@ def seed_admin_user_from_env() -> None:
         """,
         (user_id, email, pw_hash, salt, display, now, now),
     )
+    pk = cur.lastrowid
     conn.commit()
     conn.close()
+
+    # One-time link so owner sets/knows how to enter password (never print the password)
+    token = create_recovery_token(pk, "reset_password")
+    invite_set_password_email(email, user_id, token)
+    print(f"[admin_auth] Superadmin ready: user_id={user_id} email={email} (set password via invite/reset link)")
 
 
 def is_superadmin(user) -> bool:

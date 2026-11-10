@@ -24,13 +24,9 @@
         <p class="text-xs text-slate-500">Sign in with User ID or email</p>
       </div>
     </div>
-    <p id="bootstrapNote" class="hidden text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4">
-      No users yet. Set <code>ADMIN_EMAIL</code> + <code>ADMIN_PASSWORD</code> (+ optional <code>ADMIN_USER_ID</code>) in Railway, then redeploy once.
-    </p>
-
     <div id="panelLogin">
       <label class="block text-xs font-medium text-slate-600 mb-1.5">User ID or email</label>
-      <input id="loginUser" class="inp w-full px-3 py-2.5 text-sm mb-3" placeholder="alex or you@company.com" autocomplete="username">
+      <input id="loginUser" class="inp w-full px-3 py-2.5 text-sm mb-3" placeholder="oleksii.pyl or oleksii.pyl@gmail.com" autocomplete="username">
       <label class="block text-xs font-medium text-slate-600 mb-1.5">Password</label>
       <input id="loginPassword" type="password" class="inp w-full px-3 py-2.5 text-sm mb-3" placeholder="Your password" autocomplete="current-password">
       <p id="loginError" class="hidden text-xs text-red-600 mb-3"></p>
@@ -44,7 +40,7 @@
     <div id="panelForgotPw" class="hidden">
       <h2 class="text-sm font-semibold mb-1">Reset password</h2>
       <p class="text-xs text-slate-500 mb-3">We’ll email a one-time link. Open it and enter your <strong>new</strong> password.</p>
-      <input id="forgotPwEmail" type="email" class="inp w-full px-3 py-2.5 text-sm mb-3" placeholder="you@company.com">
+      <input id="forgotPwEmail" type="email" class="inp w-full px-3 py-2.5 text-sm mb-3" placeholder="oleksii.pyl@gmail.com" autocomplete="email">
       <p id="forgotPwMsg" class="hidden text-xs mb-3"></p>
       <button id="forgotPwBtn" class="w-full bg-blue-600 text-white font-semibold text-sm py-2.5 rounded-lg">Send reset link</button>
       <button type="button" class="linkish mt-4" id="back1">← Back</button>
@@ -53,7 +49,7 @@
     <div id="panelForgotUid" class="hidden">
       <h2 class="text-sm font-semibold mb-1">Remind User ID</h2>
       <p class="text-xs text-slate-500 mb-3">Enter your email — we’ll send your User ID.</p>
-      <input id="forgotUidEmail" type="email" class="inp w-full px-3 py-2.5 text-sm mb-3" placeholder="you@company.com">
+      <input id="forgotUidEmail" type="email" class="inp w-full px-3 py-2.5 text-sm mb-3" placeholder="oleksii.pyl@gmail.com" autocomplete="email">
       <p id="forgotUidMsg" class="hidden text-xs mb-3"></p>
       <button id="forgotUidBtn" class="w-full bg-blue-600 text-white font-semibold text-sm py-2.5 rounded-lg">Send User ID</button>
       <button type="button" class="linkish mt-4" id="back2">← Back</button>
@@ -111,7 +107,6 @@ resetBtn.onclick=async()=>{
   }catch(e){setMsg('resetMsg',e.message,false);}
 };
 (async()=>{
-  try{const s=await fetch('/api/admin/auth/status').then(r=>r.json());if(s.needs_bootstrap)bootstrapNote.classList.remove('hidden');}catch{}
   resetToken=new URLSearchParams(location.search).get('reset')||'';
   if(resetToken){show('panelReset');return;}
   const tok=sessionStorage.getItem(TOKEN_KEY);
