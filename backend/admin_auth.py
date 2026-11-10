@@ -470,20 +470,67 @@ def set_password(user_pk: int, new_password: str) -> None:
     revoke_all_sessions(user_pk)
 
 
+def mail_configured() -> bool:
+    """True if Resend API or SMTP can send mail."""
+    if os.getenv("RESEND_API_KEY") and (os.getenv("SMTP_FROM") or os.getenv("MAIL_FROM")):
+        return True
+    return bool(os.getenv("SMTP_HOST") and (os.getenv("SMTP_FROM") or os.getenv("MAIL_FROM")))
+
+
 def smtp_configured() -> bool:
-    return bool(os.getenv("SMTP_HOST") and os.getenv("SMTP_FROM"))
+    # Back-compat alias used by /api/admin/auth/status
+    return mail_configured()
 
 
 def app_base_url() -> str:
-    return (os.getenv("APP_BASE_URL") or os.getenv("RAILWAY_PUBLIC_DOMAIN") or "").rstrip("/")
+    raw = (os.getenv("APP_BASE_URL") or os.getenv("RAILWAY_PUBLIC_DOMAIN") or "").strip().rstrip("/")
+    if not raw:
+        return ""
+    if raw.startswith("http://") or raw.startswith("https://"):
+        return raw
+    return f"https://{raw}"
 
 
 def send_email(to_email: str, subject: str, body: str) -> bool:
+    from_addr = (os.getenv("SMTP_FROM") or os.getenv("MAIL_FROM") or "").strip()
+    resend_key = (os.getenv("RESEND_API_KEY") or "").strip()
+
+    # Prefer Resend HTTP API when configured (simpler on Railway than SMTP)
+    if resend_key and from_addr:
+        import json as _json
+        import urllib.request
+
+        payload = _json.dumps(
+            {
+                "from": from_addr,
+                "to": [to_email],
+                "subject": subject,
+                "text": body,
+            }
+        ).encode("utf-8")
+        req = urllib.request.Request(
+            "https://api.resend.com/emails",
+            data=payload,
+            headers={
+                "Authorization": f"Bearer {resend_key}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                ok = 200 <= resp.status < 300
+                if not ok:
+                    print(f"[admin_auth] Resend failed status={resp.status}")
+                return ok
+        except Exception as e:
+            print(f"[admin_auth] Resend error: {e}")
+            return False
+
     host = os.getenv("SMTP_HOST")
-    from_addr = os.getenv("SMTP_FROM")
     if not host or not from_addr:
         # Ops visibility only — never return link to client
-        print(f"[admin_auth] SMTP not configured. Would email {to_email}: {subject}")
+        print(f"[admin_auth] Mail not configured (set RESEND_API_KEY+MAIL_FROM or SMTP_*). Would email {to_email}: {subject}")
         print(body)
         return False
 

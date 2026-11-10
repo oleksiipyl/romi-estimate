@@ -26,7 +26,7 @@
     </div>
     <div id="panelLogin">
       <label class="block text-xs font-medium text-slate-600 mb-1.5">User ID or email</label>
-      <input id="loginUser" class="inp w-full px-3 py-2.5 text-sm mb-3" placeholder="oleksii.pyl or oleksii.pyl@gmail.com" autocomplete="username">
+      <input id="loginUser" class="inp w-full px-3 py-2.5 text-sm mb-3" placeholder="username or you@example.com" autocomplete="username">
       <label class="block text-xs font-medium text-slate-600 mb-1.5">Password</label>
       <input id="loginPassword" type="password" class="inp w-full px-3 py-2.5 text-sm mb-3" placeholder="Your password" autocomplete="current-password">
       <p id="loginError" class="hidden text-xs text-red-600 mb-3"></p>
@@ -40,7 +40,7 @@
     <div id="panelForgotPw" class="hidden">
       <h2 class="text-sm font-semibold mb-1">Reset password</h2>
       <p class="text-xs text-slate-500 mb-3">We’ll email a one-time link. Open it and enter your <strong>new</strong> password.</p>
-      <input id="forgotPwEmail" type="email" class="inp w-full px-3 py-2.5 text-sm mb-3" placeholder="oleksii.pyl@gmail.com" autocomplete="email">
+      <input id="forgotPwEmail" type="email" class="inp w-full px-3 py-2.5 text-sm mb-3" placeholder="you@example.com" autocomplete="email">
       <p id="forgotPwMsg" class="hidden text-xs mb-3"></p>
       <button id="forgotPwBtn" class="w-full bg-blue-600 text-white font-semibold text-sm py-2.5 rounded-lg">Send reset link</button>
       <button type="button" class="linkish mt-4" id="back1">← Back</button>
@@ -49,7 +49,7 @@
     <div id="panelForgotUid" class="hidden">
       <h2 class="text-sm font-semibold mb-1">Remind User ID</h2>
       <p class="text-xs text-slate-500 mb-3">Enter your email — we’ll send your User ID.</p>
-      <input id="forgotUidEmail" type="email" class="inp w-full px-3 py-2.5 text-sm mb-3" placeholder="oleksii.pyl@gmail.com" autocomplete="email">
+      <input id="forgotUidEmail" type="email" class="inp w-full px-3 py-2.5 text-sm mb-3" placeholder="you@example.com" autocomplete="email">
       <p id="forgotUidMsg" class="hidden text-xs mb-3"></p>
       <button id="forgotUidBtn" class="w-full bg-blue-600 text-white font-semibold text-sm py-2.5 rounded-lg">Send User ID</button>
       <button type="button" class="linkish mt-4" id="back2">← Back</button>
@@ -93,8 +93,8 @@ showForgotPw.onclick=()=>show('panelForgotPw');
 showForgotUid.onclick=()=>show('panelForgotUid');
 back1.onclick=()=>show('panelLogin');
 back2.onclick=()=>show('panelLogin');
-forgotPwBtn.onclick=async()=>{try{const d=await post('/api/admin/auth/forgot-password',{email:forgotPwEmail.value.trim()});setMsg('forgotPwMsg',d.message,true);}catch(e){setMsg('forgotPwMsg',e.message,false);}};
-forgotUidBtn.onclick=async()=>{try{const d=await post('/api/admin/auth/forgot-user-id',{email:forgotUidEmail.value.trim()});setMsg('forgotUidMsg',d.message,true);}catch(e){setMsg('forgotUidMsg',e.message,false);}};
+forgotPwBtn.onclick=async()=>{try{const d=await post('/api/admin/auth/forgot-password',{email:forgotPwEmail.value.trim()});setMsg('forgotPwMsg',d.message,!!d.ok);}catch(e){setMsg('forgotPwMsg',e.message,false);}};
+forgotUidBtn.onclick=async()=>{try{const d=await post('/api/admin/auth/forgot-user-id',{email:forgotUidEmail.value.trim()});setMsg('forgotUidMsg',d.message,!!d.ok);}catch(e){setMsg('forgotUidMsg',e.message,false);}};
 resetBtn.onclick=async()=>{
   const p1=resetPassword.value,p2=resetPassword2.value;
   if(p1.length<8){setMsg('resetMsg','Password must be at least 8 characters',false);return;}

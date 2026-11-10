@@ -397,15 +397,28 @@ def admin_forgot_password(req: ForgotPasswordRequest, request: Request):
     if not admin_auth.check_rate_limit(f"forgot-pw:{ip}"):
         raise HTTPException(status_code=429, detail="Too many attempts. Try again later.")
 
-    generic = {
-        "ok": True,
-        "message": "If that email is registered, reset instructions were sent.",
-    }
+    if not admin_auth.mail_configured():
+        return {
+            "ok": False,
+            "email_delivery": "not_configured",
+            "message": "Email is not configured on the server yet, so reset links cannot be sent. In Railway Variables add RESEND_API_KEY + MAIL_FROM (or SMTP_HOST + SMTP_FROM + SMTP_USER + SMTP_PASS) and APP_BASE_URL, then redeploy.",
+        }
+
     user = admin_auth.find_user_by_email(req.email)
     if user:
         token = admin_auth.create_recovery_token(user["id"], "reset_password")
-        admin_auth.password_reset_email(user["email"], user["user_id"], token)
-    return generic
+        sent = admin_auth.password_reset_email(user["email"], user["user_id"], token)
+        if not sent:
+            return {
+                "ok": False,
+                "email_delivery": "failed",
+                "message": "Could not send email. Check mail provider settings / logs, then try again.",
+            }
+    return {
+        "ok": True,
+        "email_delivery": "accepted",
+        "message": "If that email is registered, reset instructions were sent. Check inbox and spam.",
+    }
 
 
 @app.post("/api/admin/auth/forgot-user-id")
@@ -414,14 +427,27 @@ def admin_forgot_user_id(req: ForgotUserIdRequest, request: Request):
     if not admin_auth.check_rate_limit(f"forgot-uid:{ip}"):
         raise HTTPException(status_code=429, detail="Too many attempts. Try again later.")
 
-    generic = {
-        "ok": True,
-        "message": "If that email is registered, the User ID reminder was sent.",
-    }
+    if not admin_auth.mail_configured():
+        return {
+            "ok": False,
+            "email_delivery": "not_configured",
+            "message": "Email is not configured on the server yet. Add RESEND_API_KEY + MAIL_FROM (or SMTP_*) and APP_BASE_URL in Railway, then redeploy.",
+        }
+
     user = admin_auth.find_user_by_email(req.email)
     if user:
-        admin_auth.user_id_reminder_email(user["email"], user["user_id"])
-    return generic
+        sent = admin_auth.user_id_reminder_email(user["email"], user["user_id"])
+        if not sent:
+            return {
+                "ok": False,
+                "email_delivery": "failed",
+                "message": "Could not send email. Check mail provider settings / logs, then try again.",
+            }
+    return {
+        "ok": True,
+        "email_delivery": "accepted",
+        "message": "If that email is registered, the User ID reminder was sent. Check inbox and spam.",
+    }
 
 
 @app.post("/api/admin/auth/reset-password")
