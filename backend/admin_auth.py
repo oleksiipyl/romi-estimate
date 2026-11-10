@@ -138,6 +138,22 @@ def ensure_admin_tables() -> None:
         )
         """
     )
+    c.execute(
+        """
+        CREATE TABLE IF NOT EXISTS access_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT NOT NULL,
+            display_name TEXT NOT NULL,
+            desired_user_id TEXT,
+            note TEXT,
+            status TEXT NOT NULL DEFAULT 'pending',
+            created_at TEXT NOT NULL,
+            decided_at TEXT,
+            decided_by_pk INTEGER,
+            FOREIGN KEY(decided_by_pk) REFERENCES admin_users(id)
+        )
+        """
+    )
     conn.commit()
     conn.close()
 
@@ -146,35 +162,61 @@ def ensure_admin_tables() -> None:
 DEFAULT_OWNER_EMAIL = "oleksii.pyl@gmail.com"
 DEFAULT_OWNER_USER_ID = "oleksii.pyl"
 DEFAULT_OWNER_DISPLAY = "Oleksii Pyl"
+# Company mailbox used for access-request alerts (override with OWNER_NOTIFY_EMAIL)
+DEFAULT_OWNER_NOTIFY = "a.olwin@olwininc.com"
+
+
+def owner_notify_email() -> str:
+    return (
+        os.getenv("OWNER_NOTIFY_EMAIL")
+        or DEFAULT_OWNER_NOTIFY
+        or os.getenv("ADMIN_EMAIL")
+        or DEFAULT_OWNER_EMAIL
+    ).strip().lower()
 
 
 def seed_admin_user_from_env() -> None:
     """Ensure product-owner superadmin exists.
 
     Identity defaults to oleksii.pyl / oleksii.pyl@gmail.com.
-    Password: ADMIN_PASSWORD if set, otherwise a random one-time secret;
-    an invite/reset link is emailed (or logged) so the owner can set a password.
+    If ADMIN_PASSWORD is set in env, it is applied on every boot (so the owner
+    can set a password in Railway Variables and log in without mail).
+    Otherwise a random password is used and an invite/reset link is emailed/logged.
     """
     email = (os.getenv("ADMIN_EMAIL") or DEFAULT_OWNER_EMAIL).strip().lower()
     user_id = (os.getenv("ADMIN_USER_ID") or DEFAULT_OWNER_USER_ID).strip().lower()
     display = (os.getenv("ADMIN_DISPLAY_NAME") or DEFAULT_OWNER_DISPLAY).strip()
-    password = os.getenv("ADMIN_PASSWORD") or secrets.token_urlsafe(18)
+    env_password = (os.getenv("ADMIN_PASSWORD") or "").strip()
     if not email or not user_id:
         return
 
     existing = find_user_by_email(email) or find_user_by_login(user_id)
     if existing:
-        # Keep identity; promote to superadmin if needed
+        conn = get_db()
         if (existing["role"] if "role" in existing.keys() else "user") != "superadmin":
-            conn = get_db()
             conn.execute(
                 "UPDATE admin_users SET role = 'superadmin', updated_at = ? WHERE id = ?",
                 (_iso(_utcnow()), existing["id"]),
             )
-            conn.commit()
-            conn.close()
+        # Allow Railway ADMIN_PASSWORD to unlock / reset owner login without SMTP
+        if env_password:
+            pw_hash, salt = hash_password(env_password)
+            conn.execute(
+                """
+                UPDATE admin_users
+                SET password_hash = ?, salt = ?, updated_at = ?,
+                    user_id = ?, email = ?, display_name = ?
+                WHERE id = ?
+                """,
+                (pw_hash, salt, _iso(_utcnow()), user_id, email, display, existing["id"]),
+            )
+            conn.execute("DELETE FROM admin_sessions WHERE user_pk = ?", (existing["id"],))
+            print(f"[admin_auth] Owner password synced from ADMIN_PASSWORD for {user_id}")
+        conn.commit()
+        conn.close()
         return
 
+    password = env_password or secrets.token_urlsafe(18)
     pw_hash, salt = hash_password(password)
     now = _iso(_utcnow())
     conn = get_db()
@@ -190,10 +232,140 @@ def seed_admin_user_from_env() -> None:
     conn.commit()
     conn.close()
 
-    # One-time link so owner sets/knows how to enter password (never print the password)
-    token = create_recovery_token(pk, "reset_password")
-    invite_set_password_email(email, user_id, token)
-    print(f"[admin_auth] Superadmin ready: user_id={user_id} email={email} (set password via invite/reset link)")
+    if not env_password:
+        token = create_recovery_token(pk, "reset_password")
+        invite_set_password_email(email, user_id, token)
+        print(f"[admin_auth] Superadmin ready: user_id={user_id} email={email} (set password via invite/reset link or ADMIN_PASSWORD)")
+    else:
+        print(f"[admin_auth] Superadmin ready: user_id={user_id} email={email} (password from ADMIN_PASSWORD)")
+
+
+def create_access_request(email: str, display_name: str, desired_user_id: str = "", note: str = "") -> dict:
+    email = (email or "").strip().lower()
+    display_name = (display_name or "").strip()
+    desired_user_id = (desired_user_id or "").strip().lower()
+    note = (note or "").strip()
+    if not email or "@" not in email:
+        raise ValueError("Valid email is required")
+    if not display_name:
+        raise ValueError("Name is required")
+    if find_user_by_email(email):
+        raise ValueError("An account with this email already exists — use Sign in / Forgot password")
+
+    conn = get_db()
+    pending = conn.execute(
+        "SELECT id FROM access_requests WHERE lower(email) = ? AND status = 'pending'",
+        (email,),
+    ).fetchone()
+    if pending:
+        conn.close()
+        raise ValueError("A pending request for this email already exists")
+
+    now = _iso(_utcnow())
+    cur = conn.execute(
+        """
+        INSERT INTO access_requests
+        (email, display_name, desired_user_id, note, status, created_at)
+        VALUES (?, ?, ?, ?, 'pending', ?)
+        """,
+        (email, display_name, desired_user_id or None, note, now),
+    )
+    pk = cur.lastrowid
+    conn.commit()
+    conn.close()
+
+    notify = owner_notify_email()
+    body = (
+        f"New access request for ROMI Estimate\n\n"
+        f"Name: {display_name}\n"
+        f"Email: {email}\n"
+        f"Requested User ID: {desired_user_id or '(auto)'}\n"
+        f"Note: {note or '—'}\n\n"
+        f"Approve or reject in Admin → Access requests.\n"
+    )
+    send_email(notify, "ROMI Estimate — access request", body)
+    return {"id": pk, "email": email, "status": "pending"}
+
+
+def list_access_requests(status: str = "pending") -> list:
+    conn = get_db()
+    if status == "all":
+        rows = conn.execute(
+            "SELECT * FROM access_requests ORDER BY created_at DESC"
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT * FROM access_requests WHERE status = ? ORDER BY created_at DESC",
+            (status,),
+        ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def decide_access_request(request_id: int, approve: bool, reviewer) -> dict:
+    conn = get_db()
+    row = conn.execute(
+        "SELECT * FROM access_requests WHERE id = ?",
+        (request_id,),
+    ).fetchone()
+    if not row:
+        conn.close()
+        raise ValueError("Request not found")
+    if row["status"] != "pending":
+        conn.close()
+        raise ValueError("Request already decided")
+
+    now = _iso(_utcnow())
+    new_status = "approved" if approve else "rejected"
+    conn.execute(
+        """
+        UPDATE access_requests
+        SET status = ?, decided_at = ?, decided_by_pk = ?
+        WHERE id = ?
+        """,
+        (new_status, now, reviewer["id"], request_id),
+    )
+    conn.commit()
+    conn.close()
+
+    created_user = None
+    if approve:
+        base = (row["desired_user_id"] or row["email"].split("@")[0]).strip().lower()
+        base = "".join(ch if ch.isalnum() or ch in "._-" else "." for ch in base) or "user"
+        candidate = base
+        n = 1
+        while find_user_by_login(candidate):
+            n += 1
+            candidate = f"{base}{n}"
+        created_user = create_user(
+            user_id=candidate,
+            email=row["email"],
+            role="user",
+            display_name=row["display_name"],
+            send_invite=True,
+        )
+        send_email(
+            row["email"],
+            "ROMI Estimate — access approved",
+            (
+                f"Hello {row['display_name']},\n\n"
+                f"Your access request was approved.\n"
+                f"User ID: {created_user['user_id']}\n"
+                f"Check your email for the set-password link, then sign in at /login.\n"
+            ),
+        )
+    else:
+        send_email(
+            row["email"],
+            "ROMI Estimate — access not approved",
+            (
+                f"Hello {row['display_name']},\n\n"
+                f"Your access request for ROMI Estimate was not approved.\n"
+                f"Contact your manager if you need access.\n"
+            ),
+        )
+
+    return {"id": request_id, "status": new_status, "user": created_user}
 
 
 def is_superadmin(user) -> bool:

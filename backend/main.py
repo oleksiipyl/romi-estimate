@@ -110,6 +110,17 @@ class CreateUserRequest(BaseModel):
     send_invite: bool = True
 
 
+class AccessRequestCreate(BaseModel):
+    email: str
+    display_name: str
+    desired_user_id: str = ""
+    note: str = ""
+
+
+class AccessRequestDecide(BaseModel):
+    approve: bool
+
+
 class SaveEstimateRequest(BaseModel):
     title: str = "Estimate"
     mid_price: Optional[float] = None
@@ -490,6 +501,53 @@ def admin_create_user(
             display_name=req.display_name,
             send_invite=req.send_invite,
         )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/access-requests")
+def submit_access_request(req: AccessRequestCreate, request: Request):
+    """Public, invite-only gate: anyone can request access; only superadmin can approve."""
+    ip = _client_ip(request)
+    if not admin_auth.check_rate_limit(f"access-req:{ip}"):
+        raise HTTPException(status_code=429, detail="Too many attempts. Try again later.")
+    try:
+        created = admin_auth.create_access_request(
+            email=req.email,
+            display_name=req.display_name,
+            desired_user_id=req.desired_user_id,
+            note=req.note,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {
+        "ok": True,
+        "id": created["id"],
+        "message": "Request submitted. An admin will review it. You will get an email when decided.",
+        "owner_notified": admin_auth.mail_configured(),
+    }
+
+
+@app.get("/api/admin/access-requests")
+def admin_list_access_requests(
+    status: str = "pending",
+    authorization: Optional[str] = Header(None),
+    x_admin_token: Optional[str] = Header(None),
+):
+    require_superadmin(authorization, x_admin_token)
+    return admin_auth.list_access_requests(status=status or "pending")
+
+
+@app.post("/api/admin/access-requests/{request_id}/decide")
+def admin_decide_access_request(
+    request_id: int,
+    req: AccessRequestDecide,
+    authorization: Optional[str] = Header(None),
+    x_admin_token: Optional[str] = Header(None),
+):
+    reviewer = require_superadmin(authorization, x_admin_token)
+    try:
+        return admin_auth.decide_access_request(request_id, approve=req.approve, reviewer=reviewer)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

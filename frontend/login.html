@@ -34,7 +34,9 @@
       <div class="flex flex-wrap gap-4 mt-4">
         <button type="button" class="linkish" id="showForgotPw">Forgot password?</button>
         <button type="button" class="linkish" id="showForgotUid">Forgot User ID?</button>
+        <button type="button" class="linkish" id="showAccess">Request access</button>
       </div>
+      <p class="text-[11px] text-slate-400 mt-3">Accounts are invite-only. Request access if you do not have a login yet.</p>
     </div>
 
     <div id="panelForgotPw" class="hidden">
@@ -53,6 +55,22 @@
       <p id="forgotUidMsg" class="hidden text-xs mb-3"></p>
       <button id="forgotUidBtn" class="w-full bg-blue-600 text-white font-semibold text-sm py-2.5 rounded-lg">Send User ID</button>
       <button type="button" class="linkish mt-4" id="back2">← Back</button>
+    </div>
+
+    <div id="panelAccess" class="hidden">
+      <h2 class="text-sm font-semibold mb-1">Request access</h2>
+      <p class="text-xs text-slate-500 mb-3">No open registration. An admin must approve your request before you can sign in.</p>
+      <label class="block text-xs font-medium text-slate-600 mb-1.5">Full name</label>
+      <input id="accessName" class="inp w-full px-3 py-2.5 text-sm mb-3" placeholder="Your name" autocomplete="name">
+      <label class="block text-xs font-medium text-slate-600 mb-1.5">Work email</label>
+      <input id="accessEmail" type="email" class="inp w-full px-3 py-2.5 text-sm mb-3" placeholder="you@example.com" autocomplete="email">
+      <label class="block text-xs font-medium text-slate-600 mb-1.5">Preferred User ID <span class="text-slate-400">(optional)</span></label>
+      <input id="accessUserId" class="inp w-full px-3 py-2.5 text-sm mb-3" placeholder="e.g. j.smith" autocomplete="username">
+      <label class="block text-xs font-medium text-slate-600 mb-1.5">Note <span class="text-slate-400">(optional)</span></label>
+      <textarea id="accessNote" class="inp w-full px-3 py-2.5 text-sm mb-3" rows="2" placeholder="Why you need access"></textarea>
+      <p id="accessMsg" class="hidden text-xs mb-3"></p>
+      <button id="accessBtn" class="w-full bg-blue-600 text-white font-semibold text-sm py-2.5 rounded-lg">Submit request</button>
+      <button type="button" class="linkish mt-4" id="backAccess">← Back</button>
     </div>
 
     <div id="panelReset" class="hidden">
@@ -75,7 +93,7 @@
 const TOKEN_KEY='fg_admin_token';
 const USER_KEY='fg_admin_user';
 let resetToken='';
-function show(id){['panelLogin','panelForgotPw','panelForgotUid','panelReset'].forEach(p=>document.getElementById(p).classList.toggle('hidden',p!==id));}
+function show(id){['panelLogin','panelForgotPw','panelForgotUid','panelAccess','panelReset'].forEach(p=>document.getElementById(p).classList.toggle('hidden',p!==id));}
 function setMsg(id,text,ok){const el=document.getElementById(id);el.textContent=text;el.className=`text-xs mb-3 ${ok?'text-emerald-700':'text-red-600'}`;el.classList.remove('hidden');}
 function saveSession(data){sessionStorage.setItem(TOKEN_KEY,data.token);sessionStorage.setItem(USER_KEY,JSON.stringify({user_id:data.user_id,email:data.email,role:data.role,display_name:data.display_name,home:data.home}));}
 async function post(path,body){const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.detail||`Error ${r.status}`);return j;}
@@ -91,10 +109,23 @@ document.getElementById('loginBtn').onclick=async()=>{
 loginPassword.addEventListener('keydown',e=>{if(e.key==='Enter')loginBtn.click();});
 showForgotPw.onclick=()=>show('panelForgotPw');
 showForgotUid.onclick=()=>show('panelForgotUid');
+showAccess.onclick=()=>show('panelAccess');
 back1.onclick=()=>show('panelLogin');
 back2.onclick=()=>show('panelLogin');
+backAccess.onclick=()=>show('panelLogin');
 forgotPwBtn.onclick=async()=>{try{const d=await post('/api/admin/auth/forgot-password',{email:forgotPwEmail.value.trim()});setMsg('forgotPwMsg',d.message,!!d.ok);}catch(e){setMsg('forgotPwMsg',e.message,false);}};
 forgotUidBtn.onclick=async()=>{try{const d=await post('/api/admin/auth/forgot-user-id',{email:forgotUidEmail.value.trim()});setMsg('forgotUidMsg',d.message,!!d.ok);}catch(e){setMsg('forgotUidMsg',e.message,false);}};
+accessBtn.onclick=async()=>{
+  try{
+    const d=await post('/api/access-requests',{
+      email:accessEmail.value.trim(),
+      display_name:accessName.value.trim(),
+      desired_user_id:accessUserId.value.trim(),
+      note:accessNote.value.trim(),
+    });
+    setMsg('accessMsg',d.message,!!d.ok);
+  }catch(e){setMsg('accessMsg',e.message,false);}
+};
 resetBtn.onclick=async()=>{
   const p1=resetPassword.value,p2=resetPassword2.value;
   if(p1.length<8){setMsg('resetMsg','Password must be at least 8 characters',false);return;}
