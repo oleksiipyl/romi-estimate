@@ -3,7 +3,7 @@ ROMI Estimate — FastAPI server
 Run: uvicorn main:app --reload --port 8000
 """
 
-from fastapi import FastAPI, HTTPException, Header, Request
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -12,6 +12,7 @@ from typing import Optional, List
 import os
 import sys
 import json
+import re
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -90,11 +91,11 @@ class AdminLoginRequest(BaseModel):
 
 
 class ForgotPasswordRequest(BaseModel):
-    email: str
+    email: str = Field(..., min_length=3, max_length=320)
 
 
 class ForgotUserIdRequest(BaseModel):
-    email: str
+    email: str = Field(..., min_length=3, max_length=320)
 
 
 class ResetPasswordRequest(BaseModel):
@@ -108,6 +109,17 @@ class CreateUserRequest(BaseModel):
     display_name: str = ""
     role: str = "user"
     send_invite: bool = True
+
+
+class AccessRequestCreate(BaseModel):
+    email: str
+    display_name: str
+    desired_user_id: str = ""
+    note: str = ""
+
+
+class AccessRequestDecide(BaseModel):
+    approve: bool
 
 
 class SaveEstimateRequest(BaseModel):
@@ -391,63 +403,144 @@ def admin_me(authorization: Optional[str] = Header(None), x_admin_token: Optiona
     return pub
 
 
+# Public recovery responses are account-invariant (known == unknown).
+_RECOVERY_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+_RECOVERY_UNAVAILABLE = {
+    "ok": False,
+    "email_delivery": "not_configured",
+    "message": "Email recovery is temporarily unavailable. Try again later or contact an administrator.",
+}
+_RECOVERY_ACCEPTED_PASSWORD = {
+    "ok": True,
+    "email_delivery": "accepted",
+    "message": "If that email is registered, password reset instructions will be emailed shortly. Check inbox and spam.",
+}
+_RECOVERY_ACCEPTED_USER_ID = {
+    "ok": True,
+    "email_delivery": "accepted",
+    "message": "If that email is registered, the User ID reminder will be emailed shortly. Check inbox and spam.",
+}
+
+
+def _normalize_recovery_email(raw: str) -> Optional[str]:
+    email = (raw or "").strip().lower()
+    if not email or len(email) > 320 or not _RECOVERY_EMAIL_RE.match(email):
+        return None
+    return email
+
+
 @app.post("/api/admin/auth/forgot-password")
-def admin_forgot_password(req: ForgotPasswordRequest, request: Request):
+def admin_forgot_password(
+    req: ForgotPasswordRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
+):
+    """Forgot password — uniform public response; mail only for known accounts after response.
+
+    Timing architecture: Starlette/FastAPI BackgroundTasks run after the ASGI response
+    is sent, so provider latency cannot hold the HTTP response for known accounts.
+    Unknown accounts schedule zero mail work. Configuration short-circuits before lookup.
+    """
     ip = _client_ip(request)
     if not admin_auth.check_rate_limit(f"forgot-pw:{ip}"):
         raise HTTPException(status_code=429, detail="Too many attempts. Try again later.")
 
-    if not admin_auth.mail_configured():
-        return {
-            "ok": False,
-            "email_delivery": "not_configured",
-            "message": "Email is not configured on the server yet, so reset links cannot be sent. In Railway Variables add RESEND_API_KEY + MAIL_FROM (or SMTP_HOST + SMTP_FROM + SMTP_USER + SMTP_PASS) and APP_BASE_URL, then redeploy.",
-        }
+    email = _normalize_recovery_email(req.email)
+    if email is None:
+        raise HTTPException(status_code=400, detail="Enter a valid email address")
 
-    user = admin_auth.find_user_by_email(req.email)
-    if user:
-        token = admin_auth.create_recovery_token(user["id"], "reset_password")
-        sent = admin_auth.password_reset_email(user["email"], user["user_id"], token)
-        if not sent:
-            return {
-                "ok": False,
-                "email_delivery": "failed",
-                "message": "Could not send email. Check mail provider settings / logs, then try again.",
-            }
-    return {
-        "ok": True,
-        "email_delivery": "accepted",
-        "message": "If that email is registered, reset instructions were sent. Check inbox and spam.",
-    }
+    # Global unavailable: independent of whether the address exists.
+    if not admin_auth.mail_configured():
+        admin_auth.log_mail_event(
+            "forgot_password",
+            category="not_configured",
+            correlation_id=admin_auth.new_mail_correlation_id(),
+        )
+        return dict(_RECOVERY_UNAVAILABLE)
+
+    correlation_id = admin_auth.new_mail_correlation_id()
+    try:
+        user = admin_auth.find_user_by_email(email)
+        if user:
+            background_tasks.add_task(
+                admin_auth.run_password_reset_delivery,
+                user["id"],
+                user["email"],
+                user["user_id"],
+                correlation_id,
+            )
+            admin_auth.log_mail_event(
+                "forgot_password",
+                category="queued",
+                correlation_id=correlation_id,
+            )
+        else:
+            admin_auth.log_mail_event(
+                "forgot_password",
+                category="no_delivery",
+                correlation_id=correlation_id,
+            )
+    except Exception:
+        admin_auth.log_mail_event(
+            "forgot_password",
+            category="handler_exception",
+            correlation_id=correlation_id,
+        )
+    # Same body for known, unknown, provider-later-failure, and handler exceptions.
+    return dict(_RECOVERY_ACCEPTED_PASSWORD)
 
 
 @app.post("/api/admin/auth/forgot-user-id")
-def admin_forgot_user_id(req: ForgotUserIdRequest, request: Request):
+def admin_forgot_user_id(
+    req: ForgotUserIdRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
+):
+    """Forgot User ID — same anti-enumeration / after-response mail rules as forgot-password."""
     ip = _client_ip(request)
     if not admin_auth.check_rate_limit(f"forgot-uid:{ip}"):
         raise HTTPException(status_code=429, detail="Too many attempts. Try again later.")
 
-    if not admin_auth.mail_configured():
-        return {
-            "ok": False,
-            "email_delivery": "not_configured",
-            "message": "Email is not configured on the server yet. Add RESEND_API_KEY + MAIL_FROM (or SMTP_*) and APP_BASE_URL in Railway, then redeploy.",
-        }
+    email = _normalize_recovery_email(req.email)
+    if email is None:
+        raise HTTPException(status_code=400, detail="Enter a valid email address")
 
-    user = admin_auth.find_user_by_email(req.email)
-    if user:
-        sent = admin_auth.user_id_reminder_email(user["email"], user["user_id"])
-        if not sent:
-            return {
-                "ok": False,
-                "email_delivery": "failed",
-                "message": "Could not send email. Check mail provider settings / logs, then try again.",
-            }
-    return {
-        "ok": True,
-        "email_delivery": "accepted",
-        "message": "If that email is registered, the User ID reminder was sent. Check inbox and spam.",
-    }
+    if not admin_auth.mail_configured():
+        admin_auth.log_mail_event(
+            "forgot_user_id",
+            category="not_configured",
+            correlation_id=admin_auth.new_mail_correlation_id(),
+        )
+        return dict(_RECOVERY_UNAVAILABLE)
+
+    correlation_id = admin_auth.new_mail_correlation_id()
+    try:
+        user = admin_auth.find_user_by_email(email)
+        if user:
+            background_tasks.add_task(
+                admin_auth.run_user_id_reminder_delivery,
+                user["email"],
+                user["user_id"],
+                correlation_id,
+            )
+            admin_auth.log_mail_event(
+                "forgot_user_id",
+                category="queued",
+                correlation_id=correlation_id,
+            )
+        else:
+            admin_auth.log_mail_event(
+                "forgot_user_id",
+                category="no_delivery",
+                correlation_id=correlation_id,
+            )
+    except Exception:
+        admin_auth.log_mail_event(
+            "forgot_user_id",
+            category="handler_exception",
+            correlation_id=correlation_id,
+        )
+    return dict(_RECOVERY_ACCEPTED_USER_ID)
 
 
 @app.post("/api/admin/auth/reset-password")
@@ -490,6 +583,96 @@ def admin_create_user(
             display_name=req.display_name,
             send_invite=req.send_invite,
         )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+_ACCESS_REQUEST_ACCEPTED = {
+    "ok": True,
+    "message": "If you are eligible, your access request was recorded. An admin will review it and email you when decided.",
+}
+
+
+@app.post("/api/access-requests")
+def submit_access_request(
+    req: AccessRequestCreate,
+    request: Request,
+    background_tasks: BackgroundTasks,
+):
+    """Public invite-only gate. Response is identity-invariant for valid requests.
+
+    Existing accounts, already-pending emails, and newly created requests all receive
+    the same HTTP status/body. Owner notify mail runs after the ASGI response via
+    BackgroundTasks, and only when a new pending row is actually inserted.
+    """
+    ip = _client_ip(request)
+    if not admin_auth.check_rate_limit(f"access-req:{ip}"):
+        raise HTTPException(status_code=429, detail="Too many attempts. Try again later.")
+
+    correlation_id = admin_auth.new_mail_correlation_id()
+    try:
+        result = admin_auth.create_access_request(
+            email=req.email,
+            display_name=req.display_name,
+            desired_user_id=req.desired_user_id,
+            note=req.note,
+        )
+    except ValueError as e:
+        # Input validation only (malformed email / missing name) — not identity state.
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception:
+        admin_auth.log_mail_event(
+            "access_request",
+            category="handler_exception",
+            correlation_id=correlation_id,
+        )
+        return dict(_ACCESS_REQUEST_ACCEPTED)
+
+    outcome = result.get("outcome")
+    if outcome == "created":
+        background_tasks.add_task(
+            admin_auth.notify_owner_of_access_request,
+            result["email"],
+            result.get("display_name") or "",
+            result.get("desired_user_id") or "",
+            result.get("note") or "",
+            correlation_id,
+        )
+        admin_auth.log_mail_event(
+            "access_request",
+            category="queued",
+            correlation_id=correlation_id,
+        )
+    else:
+        # existing_account / already_pending: no duplicate row, no unwanted mail
+        admin_auth.log_mail_event(
+            "access_request",
+            category="no_delivery",
+            correlation_id=correlation_id,
+        )
+    return dict(_ACCESS_REQUEST_ACCEPTED)
+
+
+@app.get("/api/admin/access-requests")
+def admin_list_access_requests(
+    status: str = "pending",
+    authorization: Optional[str] = Header(None),
+    x_admin_token: Optional[str] = Header(None),
+):
+    require_superadmin(authorization, x_admin_token)
+    return admin_auth.list_access_requests(status=status or "pending")
+
+
+@app.post("/api/admin/access-requests/{request_id}/decide")
+def admin_decide_access_request(
+    request_id: int,
+    req: AccessRequestDecide,
+    authorization: Optional[str] = Header(None),
+    x_admin_token: Optional[str] = Header(None),
+):
+    reviewer = require_superadmin(authorization, x_admin_token)
+    try:
+        return admin_auth.decide_access_request(request_id, approve=req.approve, reviewer=reviewer)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

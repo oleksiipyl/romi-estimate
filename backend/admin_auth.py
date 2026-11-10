@@ -138,6 +138,22 @@ def ensure_admin_tables() -> None:
         )
         """
     )
+    c.execute(
+        """
+        CREATE TABLE IF NOT EXISTS access_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT NOT NULL,
+            display_name TEXT NOT NULL,
+            desired_user_id TEXT,
+            note TEXT,
+            status TEXT NOT NULL DEFAULT 'pending',
+            created_at TEXT NOT NULL,
+            decided_at TEXT,
+            decided_by_pk INTEGER,
+            FOREIGN KEY(decided_by_pk) REFERENCES admin_users(id)
+        )
+        """
+    )
     conn.commit()
     conn.close()
 
@@ -146,25 +162,36 @@ def ensure_admin_tables() -> None:
 DEFAULT_OWNER_EMAIL = "oleksii.pyl@gmail.com"
 DEFAULT_OWNER_USER_ID = "oleksii.pyl"
 DEFAULT_OWNER_DISPLAY = "Oleksii Pyl"
+# Company mailbox used for access-request alerts (override with OWNER_NOTIFY_EMAIL)
+DEFAULT_OWNER_NOTIFY = "a.olwin@olwininc.com"
+
+
+def owner_notify_email() -> str:
+    return (
+        os.getenv("OWNER_NOTIFY_EMAIL")
+        or DEFAULT_OWNER_NOTIFY
+        or os.getenv("ADMIN_EMAIL")
+        or DEFAULT_OWNER_EMAIL
+    ).strip().lower()
 
 
 def seed_admin_user_from_env() -> None:
     """Ensure product-owner superadmin exists.
 
     Identity defaults to oleksii.pyl / oleksii.pyl@gmail.com.
-    Password: ADMIN_PASSWORD if set, otherwise a random one-time secret;
-    an invite/reset link is emailed (or logged) so the owner can set a password.
+    ADMIN_PASSWORD is used only when creating the owner for the first time.
+    Repeated boots must not overwrite a changed password or revoke sessions.
     """
     email = (os.getenv("ADMIN_EMAIL") or DEFAULT_OWNER_EMAIL).strip().lower()
     user_id = (os.getenv("ADMIN_USER_ID") or DEFAULT_OWNER_USER_ID).strip().lower()
     display = (os.getenv("ADMIN_DISPLAY_NAME") or DEFAULT_OWNER_DISPLAY).strip()
-    password = os.getenv("ADMIN_PASSWORD") or secrets.token_urlsafe(18)
+    env_password = (os.getenv("ADMIN_PASSWORD") or "").strip()
     if not email or not user_id:
         return
 
     existing = find_user_by_email(email) or find_user_by_login(user_id)
     if existing:
-        # Keep identity; promote to superadmin if needed
+        # Existing owner: preserve password hash, salt, and sessions across boots.
         if (existing["role"] if "role" in existing.keys() else "user") != "superadmin":
             conn = get_db()
             conn.execute(
@@ -173,8 +200,10 @@ def seed_admin_user_from_env() -> None:
             )
             conn.commit()
             conn.close()
+            print(f"[admin_auth] Owner role ensured superadmin for user_pk={existing['id']}")
         return
 
+    password = env_password or secrets.token_urlsafe(18)
     pw_hash, salt = hash_password(password)
     now = _iso(_utcnow())
     conn = get_db()
@@ -190,10 +219,184 @@ def seed_admin_user_from_env() -> None:
     conn.commit()
     conn.close()
 
-    # One-time link so owner sets/knows how to enter password (never print the password)
-    token = create_recovery_token(pk, "reset_password")
-    invite_set_password_email(email, user_id, token)
-    print(f"[admin_auth] Superadmin ready: user_id={user_id} email={email} (set password via invite/reset link)")
+    if not env_password:
+        token = create_recovery_token(pk, "reset_password")
+        invite_set_password_email(email, user_id, token)
+        print(f"[admin_auth] Superadmin ready: user_id={user_id} email={email} (set password via invite/reset link or ADMIN_PASSWORD)")
+    else:
+        print(f"[admin_auth] Superadmin ready: user_id={user_id} email={email} (password from ADMIN_PASSWORD)")
+
+
+def notify_owner_of_access_request(
+    email: str,
+    display_name: str,
+    desired_user_id: str,
+    note: str,
+    correlation_id: str = "",
+) -> None:
+    """Background owner alert for a newly recorded access request."""
+    cid = correlation_id or new_mail_correlation_id()
+    try:
+        notify = owner_notify_email()
+        body = (
+            f"New access request for ROMI Estimate\n\n"
+            f"Name: {display_name}\n"
+            f"Email: {email}\n"
+            f"Requested User ID: {desired_user_id or '(auto)'}\n"
+            f"Note: {note or '—'}\n\n"
+            f"Approve or reject in Admin → Access requests.\n"
+        )
+        ok = send_email(notify, "ROMI Estimate — access request", body, correlation_id=cid)
+        if not ok:
+            log_mail_event("access_request", category="provider_failed", correlation_id=cid)
+    except Exception:
+        log_mail_event("access_request", category="provider_exception", correlation_id=cid)
+
+
+def create_access_request(email: str, display_name: str, desired_user_id: str = "", note: str = "") -> dict:
+    """Record an access request when appropriate.
+
+    Returns an internal outcome for the caller. Public HTTP must not expose
+    existing-account vs pending vs newly-created differences.
+    Does not send mail synchronously — caller may schedule notify_owner_of_access_request
+    only when outcome == 'created'.
+    """
+    email = (email or "").strip().lower()
+    display_name = (display_name or "").strip()
+    desired_user_id = (desired_user_id or "").strip().lower()
+    note = (note or "").strip()
+    if not email or "@" not in email or "." not in email.split("@")[-1]:
+        raise ValueError("Valid email is required")
+    if not display_name:
+        raise ValueError("Name is required")
+
+    if find_user_by_email(email):
+        return {
+            "outcome": "existing_account",
+            "created": False,
+            "email": email,
+            "status": None,
+            "id": None,
+        }
+
+    conn = get_db()
+    pending = conn.execute(
+        "SELECT id FROM access_requests WHERE lower(email) = ? AND status = 'pending'",
+        (email,),
+    ).fetchone()
+    if pending:
+        conn.close()
+        return {
+            "outcome": "already_pending",
+            "created": False,
+            "email": email,
+            "status": "pending",
+            "id": pending["id"],
+        }
+
+    now = _iso(_utcnow())
+    cur = conn.execute(
+        """
+        INSERT INTO access_requests
+        (email, display_name, desired_user_id, note, status, created_at)
+        VALUES (?, ?, ?, ?, 'pending', ?)
+        """,
+        (email, display_name, desired_user_id or None, note, now),
+    )
+    pk = cur.lastrowid
+    conn.commit()
+    conn.close()
+    return {
+        "outcome": "created",
+        "created": True,
+        "email": email,
+        "status": "pending",
+        "id": pk,
+        "display_name": display_name,
+        "desired_user_id": desired_user_id,
+        "note": note,
+    }
+
+
+def list_access_requests(status: str = "pending") -> list:
+    conn = get_db()
+    if status == "all":
+        rows = conn.execute(
+            "SELECT * FROM access_requests ORDER BY created_at DESC"
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT * FROM access_requests WHERE status = ? ORDER BY created_at DESC",
+            (status,),
+        ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def decide_access_request(request_id: int, approve: bool, reviewer) -> dict:
+    conn = get_db()
+    row = conn.execute(
+        "SELECT * FROM access_requests WHERE id = ?",
+        (request_id,),
+    ).fetchone()
+    if not row:
+        conn.close()
+        raise ValueError("Request not found")
+    if row["status"] != "pending":
+        conn.close()
+        raise ValueError("Request already decided")
+
+    now = _iso(_utcnow())
+    new_status = "approved" if approve else "rejected"
+    conn.execute(
+        """
+        UPDATE access_requests
+        SET status = ?, decided_at = ?, decided_by_pk = ?
+        WHERE id = ?
+        """,
+        (new_status, now, reviewer["id"], request_id),
+    )
+    conn.commit()
+    conn.close()
+
+    created_user = None
+    if approve:
+        base = (row["desired_user_id"] or row["email"].split("@")[0]).strip().lower()
+        base = "".join(ch if ch.isalnum() or ch in "._-" else "." for ch in base) or "user"
+        candidate = base
+        n = 1
+        while find_user_by_login(candidate):
+            n += 1
+            candidate = f"{base}{n}"
+        created_user = create_user(
+            user_id=candidate,
+            email=row["email"],
+            role="user",
+            display_name=row["display_name"],
+            send_invite=True,
+        )
+        send_email(
+            row["email"],
+            "ROMI Estimate — access approved",
+            (
+                f"Hello {row['display_name']},\n\n"
+                f"Your access request was approved.\n"
+                f"User ID: {created_user['user_id']}\n"
+                f"Check your email for the set-password link, then sign in at /login.\n"
+            ),
+        )
+    else:
+        send_email(
+            row["email"],
+            "ROMI Estimate — access not approved",
+            (
+                f"Hello {row['display_name']},\n\n"
+                f"Your access request for ROMI Estimate was not approved.\n"
+                f"Contact your manager if you need access.\n"
+            ),
+        )
+
+    return {"id": request_id, "status": new_status, "user": created_user}
 
 
 def is_superadmin(user) -> bool:
@@ -471,7 +674,7 @@ def set_password(user_pk: int, new_password: str) -> None:
 
 
 def mail_configured() -> bool:
-    """True if Resend API or SMTP can send mail."""
+    """True if Resend API or SMTP credentials are present (not a live health check)."""
     if os.getenv("RESEND_API_KEY") and (os.getenv("SMTP_FROM") or os.getenv("MAIL_FROM")):
         return True
     return bool(os.getenv("SMTP_HOST") and (os.getenv("SMTP_FROM") or os.getenv("MAIL_FROM")))
@@ -491,13 +694,32 @@ def app_base_url() -> str:
     return f"https://{raw}"
 
 
-def send_email(to_email: str, subject: str, body: str) -> bool:
+def new_mail_correlation_id() -> str:
+    return secrets.token_hex(8)
+
+
+def log_mail_event(event: str, *, category: str, correlation_id: str = "", detail: str = "") -> None:
+    """Operator-safe mail diagnostics. Never log address, subject, body, token, or raw provider errors."""
+    parts = [f"[admin_auth] mail event={event}", f"category={category}"]
+    if correlation_id:
+        parts.append(f"correlation_id={correlation_id}")
+    if detail:
+        # Only allow short allow-listed detail tokens (status codes, stage names).
+        safe = "".join(ch for ch in detail if ch.isalnum() or ch in ("_", "-", "=", "."))[:64]
+        if safe:
+            parts.append(f"detail={safe}")
+    print(" ".join(parts))
+
+
+def send_email(to_email: str, subject: str, body: str, *, correlation_id: str = "") -> bool:
     from_addr = (os.getenv("SMTP_FROM") or os.getenv("MAIL_FROM") or "").strip()
     resend_key = (os.getenv("RESEND_API_KEY") or "").strip()
+    cid = correlation_id or new_mail_correlation_id()
 
     # Prefer Resend HTTP API when configured (simpler on Railway than SMTP)
     if resend_key and from_addr:
         import json as _json
+        import urllib.error
         import urllib.request
 
         payload = _json.dumps(
@@ -521,17 +743,39 @@ def send_email(to_email: str, subject: str, body: str) -> bool:
             with urllib.request.urlopen(req, timeout=20) as resp:
                 ok = 200 <= resp.status < 300
                 if not ok:
-                    print(f"[admin_auth] Resend failed status={resp.status}")
+                    log_mail_event(
+                        "send",
+                        category="provider_http",
+                        correlation_id=cid,
+                        detail=f"status={resp.status}",
+                    )
+                else:
+                    log_mail_event("send", category="provider_accepted", correlation_id=cid)
                 return ok
-        except Exception as e:
-            print(f"[admin_auth] Resend error: {e}")
+        except TimeoutError:
+            log_mail_event("send", category="provider_timeout", correlation_id=cid)
+            return False
+        except urllib.error.HTTPError as e:
+            log_mail_event(
+                "send",
+                category="provider_http",
+                correlation_id=cid,
+                detail=f"status={getattr(e, 'code', 0)}",
+            )
+            return False
+        except urllib.error.URLError as e:
+            reason = getattr(e, "reason", None)
+            cat = "provider_timeout" if isinstance(reason, TimeoutError) else "provider_exception"
+            log_mail_event("send", category=cat, correlation_id=cid)
+            return False
+        except Exception:
+            log_mail_event("send", category="provider_exception", correlation_id=cid)
             return False
 
     host = os.getenv("SMTP_HOST")
     if not host or not from_addr:
-        # Ops visibility only — never return link to client
-        print(f"[admin_auth] Mail not configured (set RESEND_API_KEY+MAIL_FROM or SMTP_*). Would email {to_email}: {subject}")
-        print(body)
+        # Ops visibility only — never print recipient, subject, or body
+        log_mail_event("send", category="not_configured", correlation_id=cid)
         return False
 
     port = int(os.getenv("SMTP_PORT") or "587")
@@ -546,13 +790,27 @@ def send_email(to_email: str, subject: str, body: str) -> bool:
     msg.set_content(body)
 
     context = ssl.create_default_context()
-    with smtplib.SMTP(host, port, timeout=20) as server:
-        if use_tls:
-            server.starttls(context=context)
-        if user:
-            server.login(user, password)
-        server.send_message(msg)
-    return True
+    try:
+        with smtplib.SMTP(host, port, timeout=20) as server:
+            if use_tls:
+                server.starttls(context=context)
+            if user:
+                server.login(user, password)
+            server.send_message(msg)
+        log_mail_event("send", category="provider_accepted", correlation_id=cid)
+        return True
+    except (TimeoutError, smtplib.SMTPServerDisconnected):
+        log_mail_event("send", category="provider_timeout", correlation_id=cid)
+        return False
+    except smtplib.SMTPException:
+        log_mail_event("send", category="provider_exception", correlation_id=cid)
+        return False
+    except OSError:
+        log_mail_event("send", category="provider_exception", correlation_id=cid)
+        return False
+    except Exception:
+        log_mail_event("send", category="provider_exception", correlation_id=cid)
+        return False
 
 
 def _login_link(token: Optional[str] = None) -> str:
@@ -561,7 +819,7 @@ def _login_link(token: Optional[str] = None) -> str:
     return f"{base}{path}" if base else path
 
 
-def password_reset_email(email: str, user_id: str, token: str) -> bool:
+def password_reset_email(email: str, user_id: str, token: str, *, correlation_id: str = "") -> bool:
     link = _login_link(token)
     body = (
         f"Hello,\n\n"
@@ -570,10 +828,10 @@ def password_reset_email(email: str, user_id: str, token: str) -> bool:
         f"{link}\n\n"
         f"If you did not request this, ignore this email.\n"
     )
-    return send_email(email, "ROMI Estimate — password reset", body)
+    return send_email(email, "ROMI Estimate — password reset", body, correlation_id=correlation_id)
 
 
-def invite_set_password_email(email: str, user_id: str, token: str) -> bool:
+def invite_set_password_email(email: str, user_id: str, token: str, *, correlation_id: str = "") -> bool:
     link = _login_link(token)
     body = (
         f"Hello,\n\n"
@@ -583,14 +841,51 @@ def invite_set_password_email(email: str, user_id: str, token: str) -> bool:
         f"{link}\n\n"
         f"After that you can sign in at /login and open My Estimates.\n"
     )
-    return send_email(email, "ROMI Estimate — set your password", body)
+    return send_email(email, "ROMI Estimate — set your password", body, correlation_id=correlation_id)
 
 
-def user_id_reminder_email(email: str, user_id: str) -> bool:
+def user_id_reminder_email(email: str, user_id: str, *, correlation_id: str = "") -> bool:
     body = (
         f"Hello,\n\n"
         f"Your ROMI Estimate User ID is: {user_id}\n"
         f"Sign in at /login with this User ID (or this email) and your password.\n\n"
         f"If you did not request this, ignore this email.\n"
     )
-    return send_email(email, "ROMI Estimate — User ID reminder", body)
+    return send_email(email, "ROMI Estimate — User ID reminder", body, correlation_id=correlation_id)
+
+
+def run_password_reset_delivery(user_pk: int, email: str, user_id: str, correlation_id: str) -> None:
+    """Background recovery mail: token + send. Failures stay in operator logs only."""
+    try:
+        token = create_recovery_token(user_pk, "reset_password")
+        ok = password_reset_email(email, user_id, token, correlation_id=correlation_id)
+        if not ok:
+            log_mail_event(
+                "recovery_password",
+                category="provider_failed",
+                correlation_id=correlation_id,
+            )
+    except Exception:
+        log_mail_event(
+            "recovery_password",
+            category="provider_exception",
+            correlation_id=correlation_id,
+        )
+
+
+def run_user_id_reminder_delivery(email: str, user_id: str, correlation_id: str) -> None:
+    """Background User ID reminder. Failures stay in operator logs only."""
+    try:
+        ok = user_id_reminder_email(email, user_id, correlation_id=correlation_id)
+        if not ok:
+            log_mail_event(
+                "recovery_user_id",
+                category="provider_failed",
+                correlation_id=correlation_id,
+            )
+    except Exception:
+        log_mail_event(
+            "recovery_user_id",
+            category="provider_exception",
+            correlation_id=correlation_id,
+        )
