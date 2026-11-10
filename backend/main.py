@@ -3,20 +3,23 @@ ROMI Estimate — FastAPI server
 Run: uvicorn main:app --reload --port 8000
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List
 import os
 import sys
+import json
 
 sys.path.insert(0, os.path.dirname(__file__))
 
 from database import get_db, init_db, seed_services, seed_zip_multipliers, seed_modifiers, seed_settings
 from calculator import calculate, parse_dimensions
 from products import PRODUCTS, get_products_by_category, CATEGORY_META, get_product, HARDWARE_PRODUCTS
+import admin_auth
+import estimates as estimates_store
 
 # Init DB on startup
 init_db()
@@ -24,6 +27,8 @@ seed_services()
 seed_zip_multipliers()
 seed_modifiers()
 seed_settings()
+admin_auth.ensure_admin_tables()
+admin_auth.seed_admin_user_from_env()
 
 app = FastAPI(title="ROMI Estimate API", version="1.0.0")
 
@@ -77,6 +82,41 @@ class UpdateServiceRequest(BaseModel):
 
 class UpdateSettingRequest(BaseModel):
     value: str
+
+
+class AdminLoginRequest(BaseModel):
+    login: str = Field(..., description="User ID or email")
+    password: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
+class ForgotUserIdRequest(BaseModel):
+    email: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str = Field(..., min_length=8)
+
+
+class CreateUserRequest(BaseModel):
+    user_id: str
+    email: str
+    display_name: str = ""
+    role: str = "user"
+    send_invite: bool = True
+
+
+class SaveEstimateRequest(BaseModel):
+    title: str = "Estimate"
+    mid_price: Optional[float] = None
+    range_min: Optional[float] = None
+    range_max: Optional[float] = None
+    notes: str = ""
+    payload: dict = {}
 
 
 # ─────────────────────────────────────────────────────────
@@ -244,7 +284,47 @@ def calculate_price(req: CalculateRequest):
 # ADMIN ENDPOINTS
 # ─────────────────────────────────────────────────────────
 
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "fastglass2026")
+def _client_ip(request: Request) -> str:
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _bearer_token(authorization: Optional[str], x_admin_token: Optional[str]) -> str:
+    if authorization and authorization.lower().startswith("bearer "):
+        return authorization[7:].strip()
+    if x_admin_token:
+        return x_admin_token.strip()
+    return ""
+
+
+def require_user(authorization: Optional[str] = Header(None), x_admin_token: Optional[str] = Header(None)):
+    user = admin_auth.get_user_for_session(_bearer_token(authorization, x_admin_token))
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return user
+
+
+def require_superadmin(authorization: Optional[str] = Header(None), x_admin_token: Optional[str] = Header(None)):
+    user = require_user(authorization, x_admin_token)
+    if not admin_auth.is_superadmin(user):
+        raise HTTPException(status_code=403, detail="Superadmin only")
+    return user
+
+
+# Back-compat alias used by older call sites
+require_admin = require_user
+
+
+def _auth_payload(user, token: str) -> dict:
+    pub = admin_auth.public_user(user)
+    return {
+        "token": token,
+        **pub,
+        "expires_hours": admin_auth.SESSION_HOURS,
+        "home": "/admin" if pub["role"] == "superadmin" else "/portal",
+    }
 
 
 @app.get("/admin")
@@ -255,10 +335,196 @@ def admin_page():
     return {"message": "Admin panel not built yet"}
 
 
+@app.get("/login")
+def login_page():
+    path = os.path.join(frontend_path, "login.html")
+    if os.path.exists(path):
+        return FileResponse(path)
+    return FileResponse(os.path.join(frontend_path, "admin.html"))
+
+
+@app.get("/portal")
+def portal_page():
+    path = os.path.join(frontend_path, "portal.html")
+    if os.path.exists(path):
+        return FileResponse(path)
+    return {"message": "Portal not built yet"}
+
+
+@app.get("/api/admin/auth/status")
+def admin_auth_status():
+    conn = get_db()
+    count = conn.execute("SELECT COUNT(*) AS c FROM admin_users").fetchone()["c"]
+    conn.close()
+    return {
+        "users_configured": count > 0,
+        "smtp_configured": admin_auth.smtp_configured(),
+        "needs_bootstrap": count == 0,
+    }
+
+
+@app.post("/api/admin/auth/login")
+def admin_login(req: AdminLoginRequest, request: Request):
+    ip = _client_ip(request)
+    if not admin_auth.check_rate_limit(f"login:{ip}"):
+        raise HTTPException(status_code=429, detail="Too many attempts. Try again later.")
+
+    user = admin_auth.find_user_by_login(req.login)
+    if not user or not admin_auth.verify_password(req.password, user["password_hash"], user["salt"]):
+        raise HTTPException(status_code=401, detail="Invalid User ID/email or password")
+
+    token = admin_auth.create_session(user["id"])
+    return _auth_payload(user, token)
+
+
+@app.post("/api/admin/auth/logout")
+def admin_logout(authorization: Optional[str] = Header(None), x_admin_token: Optional[str] = Header(None)):
+    admin_auth.revoke_session(_bearer_token(authorization, x_admin_token))
+    return {"ok": True}
+
+
+@app.get("/api/admin/auth/me")
+def admin_me(authorization: Optional[str] = Header(None), x_admin_token: Optional[str] = Header(None)):
+    user = require_user(authorization, x_admin_token)
+    pub = admin_auth.public_user(user)
+    pub["home"] = "/admin" if pub["role"] == "superadmin" else "/portal"
+    return pub
+
+
+@app.post("/api/admin/auth/forgot-password")
+def admin_forgot_password(req: ForgotPasswordRequest, request: Request):
+    ip = _client_ip(request)
+    if not admin_auth.check_rate_limit(f"forgot-pw:{ip}"):
+        raise HTTPException(status_code=429, detail="Too many attempts. Try again later.")
+
+    generic = {
+        "ok": True,
+        "message": "If that email is registered, reset instructions were sent.",
+    }
+    user = admin_auth.find_user_by_email(req.email)
+    if user:
+        token = admin_auth.create_recovery_token(user["id"], "reset_password")
+        admin_auth.password_reset_email(user["email"], user["user_id"], token)
+    return generic
+
+
+@app.post("/api/admin/auth/forgot-user-id")
+def admin_forgot_user_id(req: ForgotUserIdRequest, request: Request):
+    ip = _client_ip(request)
+    if not admin_auth.check_rate_limit(f"forgot-uid:{ip}"):
+        raise HTTPException(status_code=429, detail="Too many attempts. Try again later.")
+
+    generic = {
+        "ok": True,
+        "message": "If that email is registered, the User ID reminder was sent.",
+    }
+    user = admin_auth.find_user_by_email(req.email)
+    if user:
+        admin_auth.user_id_reminder_email(user["email"], user["user_id"])
+    return generic
+
+
+@app.post("/api/admin/auth/reset-password")
+def admin_reset_password(req: ResetPasswordRequest, request: Request):
+    ip = _client_ip(request)
+    if not admin_auth.check_rate_limit(f"reset-pw:{ip}"):
+        raise HTTPException(status_code=429, detail="Too many attempts. Try again later.")
+
+    row = admin_auth.consume_recovery_token(req.token, "reset_password")
+    if not row:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset link")
+
+    admin_auth.set_password(row["user_pk"], req.new_password)
+    user = admin_auth.find_user_by_login(row["user_id"])
+    token = admin_auth.create_session(row["user_pk"])
+    payload = _auth_payload(user, token)
+    payload["ok"] = True
+    payload["message"] = "Password updated. Enter this new password next time you sign in. Previous sessions were signed out."
+    return payload
+
+
+@app.get("/api/admin/users")
+def admin_list_users(authorization: Optional[str] = Header(None), x_admin_token: Optional[str] = Header(None)):
+    require_superadmin(authorization, x_admin_token)
+    return admin_auth.list_users()
+
+
+@app.post("/api/admin/users")
+def admin_create_user(
+    req: CreateUserRequest,
+    authorization: Optional[str] = Header(None),
+    x_admin_token: Optional[str] = Header(None),
+):
+    require_superadmin(authorization, x_admin_token)
+    try:
+        return admin_auth.create_user(
+            user_id=req.user_id,
+            email=req.email,
+            role=req.role,
+            display_name=req.display_name,
+            send_invite=req.send_invite,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/api/estimates")
+def list_estimates(
+    mine: bool = False,
+    authorization: Optional[str] = Header(None),
+    x_admin_token: Optional[str] = Header(None),
+):
+    user = require_user(authorization, x_admin_token)
+    return estimates_store.list_estimates(user, mine_only=mine)
+
+
+@app.post("/api/estimates")
+def save_estimate(
+    req: SaveEstimateRequest,
+    authorization: Optional[str] = Header(None),
+    x_admin_token: Optional[str] = Header(None),
+):
+    user = require_user(authorization, x_admin_token)
+    return estimates_store.create_estimate(
+        user_pk=user["id"],
+        title=req.title,
+        payload=req.payload or {},
+        mid_price=req.mid_price,
+        range_min=req.range_min,
+        range_max=req.range_max,
+        notes=req.notes,
+    )
+
+
+@app.get("/api/estimates/{estimate_id}")
+def get_estimate(
+    estimate_id: int,
+    authorization: Optional[str] = Header(None),
+    x_admin_token: Optional[str] = Header(None),
+):
+    user = require_user(authorization, x_admin_token)
+    row = estimates_store.get_estimate(estimate_id, user)
+    if not row:
+        raise HTTPException(status_code=404, detail="Estimate not found")
+    return row
+
+
+@app.post("/api/estimates/{estimate_id}/sign")
+def sign_estimate(
+    estimate_id: int,
+    authorization: Optional[str] = Header(None),
+    x_admin_token: Optional[str] = Header(None),
+):
+    user = require_user(authorization, x_admin_token)
+    row = estimates_store.sign_estimate(estimate_id, user)
+    if not row:
+        raise HTTPException(status_code=404, detail="Estimate not found")
+    return row
+
+
 @app.get("/api/admin/services")
-def admin_get_services(password: str = ""):
-    if password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=401, detail="Wrong password")
+def admin_get_services(authorization: Optional[str] = Header(None), x_admin_token: Optional[str] = Header(None)):
+    require_superadmin(authorization, x_admin_token)
     conn = get_db()
     rows = conn.execute("SELECT * FROM services ORDER BY category, id").fetchall()
     conn.close()
@@ -266,9 +532,13 @@ def admin_get_services(password: str = ""):
 
 
 @app.put("/api/admin/services/{service_id}")
-def admin_update_service(service_id: int, req: UpdateServiceRequest, password: str = ""):
-    if password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=401, detail="Wrong password")
+def admin_update_service(
+    service_id: int,
+    req: UpdateServiceRequest,
+    authorization: Optional[str] = Header(None),
+    x_admin_token: Optional[str] = Header(None),
+):
+    require_superadmin(authorization, x_admin_token)
 
     conn = get_db()
     updates = {k: v for k, v in req.dict().items() if v is not None}
@@ -286,9 +556,8 @@ def admin_update_service(service_id: int, req: UpdateServiceRequest, password: s
 
 
 @app.get("/api/admin/settings")
-def admin_get_settings(password: str = ""):
-    if password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=401, detail="Wrong password")
+def admin_get_settings(authorization: Optional[str] = Header(None), x_admin_token: Optional[str] = Header(None)):
+    require_superadmin(authorization, x_admin_token)
     conn = get_db()
     rows = conn.execute("SELECT * FROM settings ORDER BY key").fetchall()
     conn.close()
@@ -296,9 +565,13 @@ def admin_get_settings(password: str = ""):
 
 
 @app.put("/api/admin/settings/{key}")
-def admin_update_setting(key: str, req: UpdateSettingRequest, password: str = ""):
-    if password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=401, detail="Wrong password")
+def admin_update_setting(
+    key: str,
+    req: UpdateSettingRequest,
+    authorization: Optional[str] = Header(None),
+    x_admin_token: Optional[str] = Header(None),
+):
+    require_superadmin(authorization, x_admin_token)
     conn = get_db()
     conn.execute("UPDATE settings SET value = ? WHERE key = ?", (req.value, key))
     conn.commit()

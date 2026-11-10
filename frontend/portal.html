@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Estimates — Fast Glass & Windows</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(180deg,#f8fafc,#f1f5f9)}
+    .card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+    .badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;text-transform:uppercase}
+    .badge.saved{background:#eff6ff;color:#1d4ed8}
+    .badge.signed{background:#ecfdf5;color:#047857}
+  </style>
+</head>
+<body class="min-h-screen pb-10">
+<header class="bg-white/95 border-b border-slate-200 sticky top-0 z-20">
+  <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
+    <div>
+      <h1 class="text-sm font-bold text-slate-900">My Estimates</h1>
+      <p id="who" class="text-[11px] text-slate-500">…</p>
+    </div>
+    <div class="flex gap-2 text-[11px]">
+      <a href="/" class="border border-slate-200 rounded-lg px-2 py-1.5 text-slate-500 hover:text-blue-600">Calculator</a>
+      <a id="adminLink" href="/admin" class="hidden border border-slate-200 rounded-lg px-2 py-1.5 text-slate-500 hover:text-blue-600">Admin</a>
+      <button id="logoutBtn" class="border border-slate-200 rounded-lg px-2 py-1.5 text-slate-500 hover:text-red-600">Logout</button>
+    </div>
+  </div>
+</header>
+<main class="max-w-5xl mx-auto px-4 pt-4 space-y-3">
+  <div class="card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <p class="text-sm text-slate-600">Save quotes from the calculator while signed in. Sign them when ready to lock the quote.</p>
+    <a href="/" class="inline-flex justify-center bg-blue-600 text-white text-sm font-semibold rounded-lg px-4 py-2">New calculation</a>
+  </div>
+  <div id="list" class="space-y-3"></div>
+  <p id="empty" class="hidden text-center text-sm text-slate-400 py-10">No saved estimates yet.</p>
+</main>
+<script>
+const TOKEN_KEY='fg_admin_token';
+const USER_KEY='fg_admin_user';
+let token=sessionStorage.getItem(TOKEN_KEY)||'';
+let me=null;
+async function api(path,opts={}){
+  const r=await fetch(path,{...opts,headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`,...(opts.headers||{})}});
+  if(r.status===401){location.href='/login';throw new Error('auth');}
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(j.detail||`Error ${r.status}`);
+  return j;
+}
+function money(n){return n==null?'—':`$${Number(n).toLocaleString()}`;}
+function render(items){
+  empty.classList.toggle('hidden',items.length>0);
+  list.innerHTML=items.map(e=>`
+    <div class="card p-4">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <div class="flex items-center gap-2 mb-1">
+            <h2 class="text-sm font-semibold text-slate-900 truncate">${esc(e.title)}</h2>
+            <span class="badge ${e.status}">${e.status}</span>
+          </div>
+          <p class="text-xs text-slate-500">${esc(e.owner.display_name||e.owner.user_id)} · ${esc(e.created_at||'')}</p>
+          <p class="text-lg font-bold text-blue-600 mt-2">${money(e.mid_price)}</p>
+          <p class="text-xs text-slate-500">Range ${money(e.range_min)} – ${money(e.range_max)}</p>
+          ${e.signed_at?`<p class="text-[11px] text-emerald-700 mt-1">Signed ${esc(e.signed_at)} by ${esc(e.signed_by_user_id||'')}</p>`:''}
+          ${e.notes?`<p class="text-xs text-slate-600 mt-2">${esc(e.notes)}</p>`:''}
+        </div>
+        <div class="flex flex-col gap-2">
+          ${e.status!=='signed'?`<button data-sign="${e.id}" class="text-xs font-semibold bg-emerald-600 text-white rounded-lg px-3 py-2">Sign</button>`:''}
+        </div>
+      </div>
+    </div>`).join('');
+  list.querySelectorAll('[data-sign]').forEach(btn=>btn.onclick=async()=>{
+    btn.disabled=true;
+    try{await api(`/api/estimates/${btn.dataset.sign}/sign`,{method:'POST'});await load();}catch(e){alert(e.message);btn.disabled=false;}
+  });
+}
+function esc(s){const d=document.createElement('div');d.textContent=s??'';return d.innerHTML;}
+async function load(){const items=await api('/api/estimates?mine=1');render(items);}
+logoutBtn.onclick=async()=>{try{await api('/api/admin/auth/logout',{method:'POST'});}catch{}sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(USER_KEY);location.href='/login';};
+(async()=>{
+  if(!token){location.href='/login';return;}
+  me=await api('/api/admin/auth/me');
+  who.textContent=`${me.display_name||me.user_id} · ${me.email}`;
+  if(me.role==='superadmin')adminLink.classList.remove('hidden');
+  await load();
+})();
+</script>
+</body>
+</html>
