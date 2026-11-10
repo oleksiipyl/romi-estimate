@@ -82,24 +82,24 @@
     <!-- Sign in -->
     <div id="panelLogin">
       <label class="block text-xs font-medium text-slate-600 mb-1.5" for="loginUser">User ID or email</label>
-      <input type="text" id="loginUser" class="inp w-full px-3 py-2.5 text-sm mb-3" placeholder="oleksii.pyl or oleksii.pyl@gmail.com" autocomplete="username">
+      <input type="text" id="loginUser" class="inp w-full px-3 py-2.5 text-sm mb-3" placeholder="username or you@example.com" autocomplete="username">
       <label class="block text-xs font-medium text-slate-600 mb-1.5" for="loginPassword">Password</label>
-      <input type="password" id="loginPassword" class="inp w-full px-3 py-2.5 text-sm mb-3" placeholder="Enter password" autocomplete="current-password">
+      <input type="password" id="loginPassword" class="inp w-full px-3 py-2.5 text-sm mb-3" placeholder="Your password" autocomplete="current-password">
       <p id="loginError" class="text-xs text-red-600 mb-3 hidden"></p>
       <button id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm py-2.5 rounded-lg transition">Sign In</button>
       <div class="flex flex-wrap gap-x-4 gap-y-2 mt-4">
         <button type="button" class="linkish" id="showForgotPw">Forgot password?</button>
         <button type="button" class="linkish" id="showForgotUid">Forgot User ID?</button>
       </div>
-      <p class="text-[11px] text-slate-400 mt-3">No password yet? Use <strong>Forgot password?</strong> with your Gmail — then open the link and save a new password.</p>
+      <p class="text-[11px] text-slate-400 mt-3">No password yet? Use <strong>Forgot password?</strong> with your email, open the link, then save a new password.</p>
     </div>
 
     <!-- Forgot password -->
     <div id="panelForgotPw" class="hidden">
       <h2 class="text-sm font-semibold text-slate-800 mb-1">Reset password</h2>
-      <p class="text-xs text-slate-500 mb-3">Enter the email on your admin account. We’ll send a one-time reset link.</p>
+      <p class="text-xs text-slate-500 mb-3">Enter the email on your account. We’ll send a one-time reset link.</p>
       <label class="block text-xs font-medium text-slate-600 mb-1.5" for="forgotPwEmail">Email</label>
-      <input type="email" id="forgotPwEmail" class="inp w-full px-3 py-2.5 text-sm mb-3" placeholder="oleksii.pyl@gmail.com" autocomplete="email">
+      <input type="email" id="forgotPwEmail" class="inp w-full px-3 py-2.5 text-sm mb-3" placeholder="you@example.com" autocomplete="email">
       <p id="forgotPwMsg" class="text-xs mb-3 hidden"></p>
       <button id="forgotPwBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm py-2.5 rounded-lg transition">Send reset link</button>
       <button type="button" class="linkish mt-4" id="backFromForgotPw">← Back to sign in</button>
@@ -108,9 +108,9 @@
     <!-- Forgot user id -->
     <div id="panelForgotUid" class="hidden">
       <h2 class="text-sm font-semibold text-slate-800 mb-1">Remind User ID</h2>
-      <p class="text-xs text-slate-500 mb-3">Enter your admin email. We’ll email your User ID.</p>
+      <p class="text-xs text-slate-500 mb-3">Enter your email. We’ll email your User ID.</p>
       <label class="block text-xs font-medium text-slate-600 mb-1.5" for="forgotUidEmail">Email</label>
-      <input type="email" id="forgotUidEmail" class="inp w-full px-3 py-2.5 text-sm mb-3" placeholder="oleksii.pyl@gmail.com" autocomplete="email">
+      <input type="email" id="forgotUidEmail" class="inp w-full px-3 py-2.5 text-sm mb-3" placeholder="you@example.com" autocomplete="email">
       <p id="forgotUidMsg" class="text-xs mb-3 hidden"></p>
       <button id="forgotUidBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm py-2.5 rounded-lg transition">Send User ID</button>
       <button type="button" class="linkish mt-4" id="backFromForgotUid">← Back to sign in</button>
@@ -702,7 +702,7 @@ document.getElementById('forgotPwBtn').addEventListener('click', async () => {
       authRedirect: false,
       body: JSON.stringify({ email }),
     });
-    setMsg('forgotPwMsg', data.message, true);
+    setMsg('forgotPwMsg', data.message, !!data.ok);
   } catch (e) {
     setMsg('forgotPwMsg', e.message, false);
   }
@@ -719,7 +719,7 @@ document.getElementById('forgotUidBtn').addEventListener('click', async () => {
       authRedirect: false,
       body: JSON.stringify({ email }),
     });
-    setMsg('forgotUidMsg', data.message, true);
+    setMsg('forgotUidMsg', data.message, !!data.ok);
   } catch (e) {
     setMsg('forgotUidMsg', e.message, false);
   }
