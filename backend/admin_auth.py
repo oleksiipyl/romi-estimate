@@ -179,9 +179,8 @@ def seed_admin_user_from_env() -> None:
     """Ensure product-owner superadmin exists.
 
     Identity defaults to oleksii.pyl / oleksii.pyl@gmail.com.
-    If ADMIN_PASSWORD is set in env, it is applied on every boot (so the owner
-    can set a password in Railway Variables and log in without mail).
-    Otherwise a random password is used and an invite/reset link is emailed/logged.
+    ADMIN_PASSWORD is used only when creating the owner for the first time.
+    Repeated boots must not overwrite a changed password or revoke sessions.
     """
     email = (os.getenv("ADMIN_EMAIL") or DEFAULT_OWNER_EMAIL).strip().lower()
     user_id = (os.getenv("ADMIN_USER_ID") or DEFAULT_OWNER_USER_ID).strip().lower()
@@ -192,28 +191,16 @@ def seed_admin_user_from_env() -> None:
 
     existing = find_user_by_email(email) or find_user_by_login(user_id)
     if existing:
-        conn = get_db()
+        # Existing owner: preserve password hash, salt, and sessions across boots.
         if (existing["role"] if "role" in existing.keys() else "user") != "superadmin":
+            conn = get_db()
             conn.execute(
                 "UPDATE admin_users SET role = 'superadmin', updated_at = ? WHERE id = ?",
                 (_iso(_utcnow()), existing["id"]),
             )
-        # Allow Railway ADMIN_PASSWORD to unlock / reset owner login without SMTP
-        if env_password:
-            pw_hash, salt = hash_password(env_password)
-            conn.execute(
-                """
-                UPDATE admin_users
-                SET password_hash = ?, salt = ?, updated_at = ?,
-                    user_id = ?, email = ?, display_name = ?
-                WHERE id = ?
-                """,
-                (pw_hash, salt, _iso(_utcnow()), user_id, email, display, existing["id"]),
-            )
-            conn.execute("DELETE FROM admin_sessions WHERE user_pk = ?", (existing["id"],))
-            print(f"[admin_auth] Owner password synced from ADMIN_PASSWORD for {user_id}")
-        conn.commit()
-        conn.close()
+            conn.commit()
+            conn.close()
+            print(f"[admin_auth] Owner role ensured superadmin for user_pk={existing['id']}")
         return
 
     password = env_password or secrets.token_urlsafe(18)
@@ -240,17 +227,57 @@ def seed_admin_user_from_env() -> None:
         print(f"[admin_auth] Superadmin ready: user_id={user_id} email={email} (password from ADMIN_PASSWORD)")
 
 
+def notify_owner_of_access_request(
+    email: str,
+    display_name: str,
+    desired_user_id: str,
+    note: str,
+    correlation_id: str = "",
+) -> None:
+    """Background owner alert for a newly recorded access request."""
+    cid = correlation_id or new_mail_correlation_id()
+    try:
+        notify = owner_notify_email()
+        body = (
+            f"New access request for ROMI Estimate\n\n"
+            f"Name: {display_name}\n"
+            f"Email: {email}\n"
+            f"Requested User ID: {desired_user_id or '(auto)'}\n"
+            f"Note: {note or '—'}\n\n"
+            f"Approve or reject in Admin → Access requests.\n"
+        )
+        ok = send_email(notify, "ROMI Estimate — access request", body, correlation_id=cid)
+        if not ok:
+            log_mail_event("access_request", category="provider_failed", correlation_id=cid)
+    except Exception:
+        log_mail_event("access_request", category="provider_exception", correlation_id=cid)
+
+
 def create_access_request(email: str, display_name: str, desired_user_id: str = "", note: str = "") -> dict:
+    """Record an access request when appropriate.
+
+    Returns an internal outcome for the caller. Public HTTP must not expose
+    existing-account vs pending vs newly-created differences.
+    Does not send mail synchronously — caller may schedule notify_owner_of_access_request
+    only when outcome == 'created'.
+    """
     email = (email or "").strip().lower()
     display_name = (display_name or "").strip()
     desired_user_id = (desired_user_id or "").strip().lower()
     note = (note or "").strip()
-    if not email or "@" not in email:
+    if not email or "@" not in email or "." not in email.split("@")[-1]:
         raise ValueError("Valid email is required")
     if not display_name:
         raise ValueError("Name is required")
+
     if find_user_by_email(email):
-        raise ValueError("An account with this email already exists — use Sign in / Forgot password")
+        return {
+            "outcome": "existing_account",
+            "created": False,
+            "email": email,
+            "status": None,
+            "id": None,
+        }
 
     conn = get_db()
     pending = conn.execute(
@@ -259,7 +286,13 @@ def create_access_request(email: str, display_name: str, desired_user_id: str = 
     ).fetchone()
     if pending:
         conn.close()
-        raise ValueError("A pending request for this email already exists")
+        return {
+            "outcome": "already_pending",
+            "created": False,
+            "email": email,
+            "status": "pending",
+            "id": pending["id"],
+        }
 
     now = _iso(_utcnow())
     cur = conn.execute(
@@ -273,18 +306,16 @@ def create_access_request(email: str, display_name: str, desired_user_id: str = 
     pk = cur.lastrowid
     conn.commit()
     conn.close()
-
-    notify = owner_notify_email()
-    body = (
-        f"New access request for ROMI Estimate\n\n"
-        f"Name: {display_name}\n"
-        f"Email: {email}\n"
-        f"Requested User ID: {desired_user_id or '(auto)'}\n"
-        f"Note: {note or '—'}\n\n"
-        f"Approve or reject in Admin → Access requests.\n"
-    )
-    send_email(notify, "ROMI Estimate — access request", body)
-    return {"id": pk, "email": email, "status": "pending"}
+    return {
+        "outcome": "created",
+        "created": True,
+        "email": email,
+        "status": "pending",
+        "id": pk,
+        "display_name": display_name,
+        "desired_user_id": desired_user_id,
+        "note": note,
+    }
 
 
 def list_access_requests(status: str = "pending") -> list:

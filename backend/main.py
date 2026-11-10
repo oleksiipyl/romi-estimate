@@ -587,27 +587,70 @@ def admin_create_user(
         raise HTTPException(status_code=400, detail=str(e))
 
 
+_ACCESS_REQUEST_ACCEPTED = {
+    "ok": True,
+    "message": "If you are eligible, your access request was recorded. An admin will review it and email you when decided.",
+}
+
+
 @app.post("/api/access-requests")
-def submit_access_request(req: AccessRequestCreate, request: Request):
-    """Public, invite-only gate: anyone can request access; only superadmin can approve."""
+def submit_access_request(
+    req: AccessRequestCreate,
+    request: Request,
+    background_tasks: BackgroundTasks,
+):
+    """Public invite-only gate. Response is identity-invariant for valid requests.
+
+    Existing accounts, already-pending emails, and newly created requests all receive
+    the same HTTP status/body. Owner notify mail runs after the ASGI response via
+    BackgroundTasks, and only when a new pending row is actually inserted.
+    """
     ip = _client_ip(request)
     if not admin_auth.check_rate_limit(f"access-req:{ip}"):
         raise HTTPException(status_code=429, detail="Too many attempts. Try again later.")
+
+    correlation_id = admin_auth.new_mail_correlation_id()
     try:
-        created = admin_auth.create_access_request(
+        result = admin_auth.create_access_request(
             email=req.email,
             display_name=req.display_name,
             desired_user_id=req.desired_user_id,
             note=req.note,
         )
     except ValueError as e:
+        # Input validation only (malformed email / missing name) — not identity state.
         raise HTTPException(status_code=400, detail=str(e))
-    return {
-        "ok": True,
-        "id": created["id"],
-        "message": "Request submitted. An admin will review it. You will get an email when decided.",
-        "owner_notified": admin_auth.mail_configured(),
-    }
+    except Exception:
+        admin_auth.log_mail_event(
+            "access_request",
+            category="handler_exception",
+            correlation_id=correlation_id,
+        )
+        return dict(_ACCESS_REQUEST_ACCEPTED)
+
+    outcome = result.get("outcome")
+    if outcome == "created":
+        background_tasks.add_task(
+            admin_auth.notify_owner_of_access_request,
+            result["email"],
+            result.get("display_name") or "",
+            result.get("desired_user_id") or "",
+            result.get("note") or "",
+            correlation_id,
+        )
+        admin_auth.log_mail_event(
+            "access_request",
+            category="queued",
+            correlation_id=correlation_id,
+        )
+    else:
+        # existing_account / already_pending: no duplicate row, no unwanted mail
+        admin_auth.log_mail_event(
+            "access_request",
+            category="no_delivery",
+            correlation_id=correlation_id,
+        )
+    return dict(_ACCESS_REQUEST_ACCEPTED)
 
 
 @app.get("/api/admin/access-requests")
