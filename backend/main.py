@@ -3,20 +3,22 @@ ROMI Estimate — FastAPI server
 Run: uvicorn main:app --reload --port 8000
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List
 import os
 import sys
+import json
 
 sys.path.insert(0, os.path.dirname(__file__))
 
 from database import get_db, init_db, seed_services, seed_zip_multipliers, seed_modifiers, seed_settings
 from calculator import calculate, parse_dimensions
 from products import PRODUCTS, get_products_by_category, CATEGORY_META, get_product, HARDWARE_PRODUCTS
+import admin_auth
 
 # Init DB on startup
 init_db()
@@ -24,6 +26,8 @@ seed_services()
 seed_zip_multipliers()
 seed_modifiers()
 seed_settings()
+admin_auth.ensure_admin_tables()
+admin_auth.seed_admin_user_from_env()
 
 app = FastAPI(title="ROMI Estimate API", version="1.0.0")
 
@@ -77,6 +81,24 @@ class UpdateServiceRequest(BaseModel):
 
 class UpdateSettingRequest(BaseModel):
     value: str
+
+
+class AdminLoginRequest(BaseModel):
+    login: str = Field(..., description="User ID or email")
+    password: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
+class ForgotUserIdRequest(BaseModel):
+    email: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str = Field(..., min_length=8)
 
 
 # ─────────────────────────────────────────────────────────
@@ -244,7 +266,23 @@ def calculate_price(req: CalculateRequest):
 # ADMIN ENDPOINTS
 # ─────────────────────────────────────────────────────────
 
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "fastglass2026")
+def _client_ip(request: Request) -> str:
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def require_admin(authorization: Optional[str] = Header(None), x_admin_token: Optional[str] = Header(None)):
+    token = None
+    if authorization and authorization.lower().startswith("bearer "):
+        token = authorization[7:].strip()
+    elif x_admin_token:
+        token = x_admin_token.strip()
+    user = admin_auth.get_user_for_session(token or "")
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return user
 
 
 @app.get("/admin")
@@ -255,10 +293,112 @@ def admin_page():
     return {"message": "Admin panel not built yet"}
 
 
+@app.get("/api/admin/auth/status")
+def admin_auth_status():
+    conn = get_db()
+    count = conn.execute("SELECT COUNT(*) AS c FROM admin_users").fetchone()["c"]
+    conn.close()
+    return {
+        "users_configured": count > 0,
+        "smtp_configured": admin_auth.smtp_configured(),
+        "needs_bootstrap": count == 0,
+    }
+
+
+@app.post("/api/admin/auth/login")
+def admin_login(req: AdminLoginRequest, request: Request):
+    ip = _client_ip(request)
+    if not admin_auth.check_rate_limit(f"login:{ip}"):
+        raise HTTPException(status_code=429, detail="Too many attempts. Try again later.")
+
+    user = admin_auth.find_user_by_login(req.login)
+    if not user or not admin_auth.verify_password(req.password, user["password_hash"], user["salt"]):
+        raise HTTPException(status_code=401, detail="Invalid User ID/email or password")
+
+    token = admin_auth.create_session(user["id"])
+    return {
+        "token": token,
+        "user_id": user["user_id"],
+        "email": user["email"],
+        "expires_hours": admin_auth.SESSION_HOURS,
+    }
+
+
+@app.post("/api/admin/auth/logout")
+def admin_logout(authorization: Optional[str] = Header(None), x_admin_token: Optional[str] = Header(None)):
+    token = None
+    if authorization and authorization.lower().startswith("bearer "):
+        token = authorization[7:].strip()
+    elif x_admin_token:
+        token = x_admin_token.strip()
+    admin_auth.revoke_session(token or "")
+    return {"ok": True}
+
+
+@app.get("/api/admin/auth/me")
+def admin_me(authorization: Optional[str] = Header(None), x_admin_token: Optional[str] = Header(None)):
+    user = require_admin(authorization, x_admin_token)
+    return {"user_id": user["user_id"], "email": user["email"]}
+
+
+@app.post("/api/admin/auth/forgot-password")
+def admin_forgot_password(req: ForgotPasswordRequest, request: Request):
+    ip = _client_ip(request)
+    if not admin_auth.check_rate_limit(f"forgot-pw:{ip}"):
+        raise HTTPException(status_code=429, detail="Too many attempts. Try again later.")
+
+    # Always same response (no email enumeration)
+    generic = {
+        "ok": True,
+        "message": "If that email is registered, reset instructions were sent.",
+    }
+    user = admin_auth.find_user_by_email(req.email)
+    if user:
+        token = admin_auth.create_recovery_token(user["id"], "reset_password")
+        admin_auth.password_reset_email(user["email"], user["user_id"], token)
+    return generic
+
+
+@app.post("/api/admin/auth/forgot-user-id")
+def admin_forgot_user_id(req: ForgotUserIdRequest, request: Request):
+    ip = _client_ip(request)
+    if not admin_auth.check_rate_limit(f"forgot-uid:{ip}"):
+        raise HTTPException(status_code=429, detail="Too many attempts. Try again later.")
+
+    generic = {
+        "ok": True,
+        "message": "If that email is registered, the User ID reminder was sent.",
+    }
+    user = admin_auth.find_user_by_email(req.email)
+    if user:
+        admin_auth.user_id_reminder_email(user["email"], user["user_id"])
+    return generic
+
+
+@app.post("/api/admin/auth/reset-password")
+def admin_reset_password(req: ResetPasswordRequest, request: Request):
+    ip = _client_ip(request)
+    if not admin_auth.check_rate_limit(f"reset-pw:{ip}"):
+        raise HTTPException(status_code=429, detail="Too many attempts. Try again later.")
+
+    row = admin_auth.consume_recovery_token(req.token, "reset_password")
+    if not row:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset link")
+
+    admin_auth.set_password(row["user_pk"], req.new_password)
+    token = admin_auth.create_session(row["user_pk"])
+    return {
+        "ok": True,
+        "token": token,
+        "user_id": row["user_id"],
+        "email": row["email"],
+        "message": "Password updated. All previous sessions were signed out.",
+    }
+
+
 @app.get("/api/admin/services")
-def admin_get_services(password: str = ""):
-    if password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=401, detail="Wrong password")
+def admin_get_services(authorization: Optional[str] = Header(None), x_admin_token: Optional[str] = Header(None)):
+    require_admin(authorization, x_admin_token)
     conn = get_db()
     rows = conn.execute("SELECT * FROM services ORDER BY category, id").fetchall()
     conn.close()
@@ -266,9 +406,13 @@ def admin_get_services(password: str = ""):
 
 
 @app.put("/api/admin/services/{service_id}")
-def admin_update_service(service_id: int, req: UpdateServiceRequest, password: str = ""):
-    if password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=401, detail="Wrong password")
+def admin_update_service(
+    service_id: int,
+    req: UpdateServiceRequest,
+    authorization: Optional[str] = Header(None),
+    x_admin_token: Optional[str] = Header(None),
+):
+    require_admin(authorization, x_admin_token)
 
     conn = get_db()
     updates = {k: v for k, v in req.dict().items() if v is not None}
@@ -286,9 +430,8 @@ def admin_update_service(service_id: int, req: UpdateServiceRequest, password: s
 
 
 @app.get("/api/admin/settings")
-def admin_get_settings(password: str = ""):
-    if password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=401, detail="Wrong password")
+def admin_get_settings(authorization: Optional[str] = Header(None), x_admin_token: Optional[str] = Header(None)):
+    require_admin(authorization, x_admin_token)
     conn = get_db()
     rows = conn.execute("SELECT * FROM settings ORDER BY key").fetchall()
     conn.close()
@@ -296,9 +439,13 @@ def admin_get_settings(password: str = ""):
 
 
 @app.put("/api/admin/settings/{key}")
-def admin_update_setting(key: str, req: UpdateSettingRequest, password: str = ""):
-    if password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=401, detail="Wrong password")
+def admin_update_setting(
+    key: str,
+    req: UpdateSettingRequest,
+    authorization: Optional[str] = Header(None),
+    x_admin_token: Optional[str] = Header(None),
+):
+    require_admin(authorization, x_admin_token)
     conn = get_db()
     conn.execute("UPDATE settings SET value = ? WHERE key = ?", (req.value, key))
     conn.commit()

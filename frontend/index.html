@@ -89,13 +89,46 @@
       flex-shrink: 0;
       box-shadow: 0 2px 8px rgba(29,78,216,.3);
     }
+    .page-shell { width: 100%; max-width: 32rem; margin-left: auto; margin-right: auto; }
+    @media (min-width: 768px) {
+      .page-shell { max-width: 48rem; }
+      .section-card { padding: 20px; border-radius: 16px; }
+      header .page-shell h1 { font-size: 1.05rem; }
+      header .page-shell p { font-size: 0.75rem; }
+    }
+    @media (min-width: 1024px) {
+      .page-shell { max-width: 72rem; }
+      .desktop-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.9fr);
+        gap: 1.5rem;
+        align-items: start;
+      }
+      .desktop-form { display: flex; flex-direction: column; gap: 1rem; }
+      .desktop-aside {
+        position: sticky;
+        top: 4.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+      #prodGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      #catGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.75rem; }
+      .pill { min-height: 56px; }
+      .job-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem 1.25rem;
+      }
+      .job-grid .job-span-2 { grid-column: 1 / -1; }
+    }
   </style>
 </head>
 <body class="min-h-screen pb-10">
 
 <!-- HEADER + LOGO -->
 <header class="bg-white/95 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-30">
-  <div class="max-w-lg mx-auto px-3 py-2.5 flex items-center justify-between gap-2">
+  <div class="page-shell px-3 md:px-6 py-2.5 md:py-3.5 flex items-center justify-between gap-2">
     <div class="flex items-center gap-2.5 min-w-0">
       <div class="logo-mark" aria-hidden="true">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round">
@@ -109,11 +142,13 @@
         <p class="text-[10px] text-slate-500 leading-tight truncate">Fast Glass &amp; Windows · Los Angeles</p>
       </div>
     </div>
-    <a href="/admin" class="flex-shrink-0 text-[10px] font-medium text-slate-400 hover:text-blue-600 border border-slate-200 rounded-lg px-2 py-1.5 transition" aria-label="Admin">Admin</a>
+    <a href="/admin" class="flex-shrink-0 text-[10px] md:text-xs font-medium text-slate-400 hover:text-blue-600 border border-slate-200 rounded-lg px-2 py-1.5 transition" aria-label="Admin">Admin</a>
   </div>
 </header>
 
-<main class="max-w-lg mx-auto px-3 pt-4 space-y-4">
+<main class="page-shell px-3 md:px-6 pt-4 md:pt-6 space-y-4">
+<div class="desktop-layout">
+<div class="desktop-form space-y-4">
 
   <!-- 1. CATEGORY -->
   <section class="section-card">
@@ -207,7 +242,8 @@
       <span class="section-title">Job Details</span>
     </div>
 
-    <div class="mb-4">
+    <div class="job-grid">
+    <div class="mb-4 lg:mb-0">
       <div class="field-lbl">ZIP Code</div>
       <div class="flex gap-2 items-center flex-wrap">
         <input id="zip" type="text" placeholder="90210" maxlength="5" inputmode="numeric"
@@ -217,7 +253,7 @@
       </div>
     </div>
 
-    <div class="mb-4">
+    <div class="mb-4 lg:mb-0">
       <div class="field-lbl">Floor</div>
       <div class="grid grid-cols-3 gap-2">
         <button type="button" onclick="setOpt('floor',1,this)" class="opt-btn on rounded-xl py-2.5 text-xs font-semibold">1st</button>
@@ -226,7 +262,7 @@
       </div>
     </div>
 
-    <div class="mb-4">
+    <div class="mb-4 lg:mb-0">
       <div class="field-lbl">Technicians</div>
       <div class="flex gap-2">
         <button type="button" onclick="setOpt('techs',1,this)" class="opt-btn on rounded-xl w-12 py-2.5 text-sm font-bold">1</button>
@@ -235,7 +271,7 @@
       </div>
     </div>
 
-    <div class="mb-4">
+    <div class="mb-4 lg:mb-0">
       <div class="field-lbl">Urgency</div>
       <div class="space-y-2">
         <button type="button" onclick="setOpt('urgency','normal',this)" class="opt-btn on w-full text-left rounded-xl px-3 py-2.5 text-xs font-medium">Standard <span class="text-slate-400">(3–5 days)</span></button>
@@ -244,14 +280,18 @@
       </div>
     </div>
 
-    <div>
+    <div class="job-span-2">
       <div class="field-lbl">Notes</div>
       <textarea id="notes" rows="2" placeholder="Access, ladder, special instructions…"
         class="inp w-full px-2.5 py-2 text-xs text-slate-800 resize-none placeholder:text-slate-400"
         oninput="sched()"></textarea>
     </div>
+    </div>
   </section>
 
+</div><!-- /.desktop-form -->
+
+<aside class="desktop-aside space-y-4">
   <!-- RESULT -->
   <div id="resultArea"></div>
   <div id="similarArea"></div>
@@ -270,6 +310,8 @@
     <div id="cartRange" class="bg-blue-50 border-l-4 border-blue-500 px-3 py-2 mt-2 rounded"></div>
     <button onclick="copyCart()" class="w-full mt-2 bg-green-600 text-white rounded-xl py-2.5 text-sm font-semibold">📋 Copy All</button>
   </div>
+</aside>
+</div><!-- /.desktop-layout -->
 
 </main>
 
