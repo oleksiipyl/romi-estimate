@@ -138,6 +138,29 @@ def ensure_admin_tables() -> None:
         )
         """
     )
+    est_cols = {row[1] for row in c.execute("PRAGMA table_info(estimates)").fetchall()}
+    if "project_number" not in est_cols:
+        c.execute("ALTER TABLE estimates ADD COLUMN project_number TEXT")
+    c.execute(
+        "CREATE INDEX IF NOT EXISTS idx_estimates_project_number ON estimates(project_number)"
+    )
+    c.execute(
+        """
+        CREATE TABLE IF NOT EXISTS estimate_audit_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            action TEXT NOT NULL,
+            estimate_id INTEGER,
+            project_number TEXT,
+            title_snapshot TEXT,
+            status_before TEXT,
+            status_after TEXT,
+            actor_pk INTEGER,
+            actor_user_id TEXT,
+            detail_json TEXT,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
     conn.commit()
     conn.close()
 
