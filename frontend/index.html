@@ -296,6 +296,21 @@
 </div><!-- /.desktop-form -->
 
 <aside class="desktop-aside space-y-4">
+  <!-- SAVED QUOTES (return / re-edit) -->
+  <div id="savedQuotesPanel" class="section-card border border-slate-200">
+    <div class="flex items-center justify-between mb-2 gap-2">
+      <div class="text-xs font-semibold text-slate-700 uppercase tracking-wide">Saved quotes</div>
+      <a href="/portal" class="text-[11px] font-medium text-blue-600">Open table →</a>
+    </div>
+    <label class="block text-[11px] font-medium text-slate-600 mb-1" for="projectNumberInput">Project / estimate # <span class="text-red-500">*</span></label>
+    <input id="projectNumberInput" type="text" class="inp w-full px-2.5 py-2 text-sm mb-2" placeholder="Household job number (required to save)" autocomplete="off">
+    <div class="flex gap-2 mb-2">
+      <input id="findProjectInput" type="text" class="inp flex-1 px-2.5 py-2 text-sm" placeholder="Find by project #">
+      <button type="button" id="findProjectBtn" class="bg-slate-800 text-white text-xs font-semibold rounded-lg px-3 py-2">Find</button>
+    </div>
+    <div id="savedQuotesList" class="space-y-1.5 text-xs text-slate-500">Sign in to load recent quotes.</div>
+  </div>
+
   <!-- RESULT -->
   <div id="resultArea"></div>
   <div id="similarArea"></div>
@@ -314,7 +329,7 @@
       <span id="cartTotal" class="text-xl font-bold text-green-700">$0</span>
     </div>
     <div id="cartRange" class="bg-blue-50 border-l-4 border-blue-500 px-3 py-2 mt-2 rounded"></div>
-    <p id="cartSaveHint" class="text-[11px] text-slate-500 mt-2 mb-1">Save quote stores the <strong>full cart</strong> to My estimates (sign-in required). Copy All only copies text for SMS.</p>
+    <p id="cartSaveHint" class="text-[11px] text-slate-500 mt-2 mb-1">Requires <strong>project #</strong> above. Save quote stores the <strong>full cart</strong>. Copy All is SMS text only.</p>
     <button type="button" id="saveCartBtn" onclick="saveCartEstimate()" class="w-full mt-1 bg-slate-900 text-white rounded-xl py-3 text-sm font-semibold shadow-sm">💾 Save quote</button>
     <button type="button" onclick="copyCart()" class="w-full mt-2 bg-green-600 text-white rounded-xl py-2.5 text-sm font-semibold">📋 Copy All (SMS text)</button>
   </div>
@@ -336,6 +351,7 @@ const TOKEN_KEY='fg_admin_token';
 const USER_KEY='fg_admin_user';
 let authUser=null;
 let lastSave=null;
+let editingEstimateId=null;
 
 async function initAuth(){
   const tok=sessionStorage.getItem(TOKEN_KEY)||'';
@@ -365,11 +381,26 @@ function cartTotals(){
   return {mid:totalMid, lo:sr(totalMid*(1-sp)), hi:sr(totalMid*(1+sp))};
 }
 
+function showEditBanner(id){
+  let bar=document.getElementById('editBanner');
+  if(!bar){
+    bar=document.createElement('div');
+    bar.id='editBanner';
+    bar.className='mx-3 md:mx-6 mt-3 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 flex flex-wrap items-center justify-between gap-2';
+    const shell=document.querySelector('main.page-shell')||document.querySelector('main');
+    shell?.prepend(bar);
+  }
+  bar.innerHTML=`<span>Editing quote <strong>#${id}</strong> — Save updates this quote, then returns to My estimates.</span>
+    <a href="/portal" class="font-semibold text-amber-800 underline">Cancel</a>`;
+}
+
 async function postEstimate(body, btn, okLabel){
   const tok=sessionStorage.getItem(TOKEN_KEY)||'';
   if(!tok){location.href='/login?next=/';return;}
-  const r=await fetch(API+'/api/estimates',{
-    method:'POST',
+  const updating=!!editingEstimateId;
+  const url=updating?`${API}/api/estimates/${editingEstimateId}`:`${API}/api/estimates`;
+  const r=await fetch(url,{
+    method:updating?'PUT':'POST',
     headers:{'Content-Type':'application/json',Authorization:`Bearer ${tok}`},
     body:JSON.stringify(body),
   });
@@ -378,23 +409,38 @@ async function postEstimate(body, btn, okLabel){
   if(!r.ok) throw new Error(j.detail||'Save failed');
   if(btn){
     const prev=btn.textContent;
-    btn.textContent=okLabel||'✅ Saved';
+    btn.textContent=okLabel||(updating?'✅ Updated':'✅ Saved');
     setTimeout(()=>{btn.textContent=prev;},1600);
   }
   return j;
 }
 
+function requireProjectNumber(){
+  const pn=(document.getElementById('projectNumberInput')?.value||'').trim();
+  if(!pn){
+    alert('Enter the household project / estimate number before saving');
+    document.getElementById('projectNumberInput')?.focus();
+    return null;
+  }
+  return pn;
+}
+
 async function saveCurrentEstimate(){
   if(!lastSave){alert('Calculate first, then Save');return;}
+  const pn=requireProjectNumber();
+  if(!pn) return;
   try{
     const client=(document.getElementById('cartClientName')?.value||'').trim();
     const body={
       ...lastSave,
+      project_number:pn,
       title: client?`${client} — ${lastSave.title}`:lastSave.title,
-      payload:{...(lastSave.payload||{}), client_name:client||null},
+      payload:{...(lastSave.payload||{}), client_name:client||null, kind:(lastSave.payload&&lastSave.payload.kind)||'glass', project_number:pn},
     };
-    const saved=await postEstimate(body, document.getElementById('saveEstBtn'), '✅ Saved');
+    const saved=await postEstimate(body, document.getElementById('saveEstBtn'), editingEstimateId?'✅ Updated':'✅ Saved');
     if(saved?.id){
+      await loadRecentQuotes();
+      if(editingEstimateId){location.href='/portal?id='+saved.id;return;}
       if(confirm('Saved. Open proposal document?')) location.href='/portal?id='+saved.id;
     }
   }catch(e){alert(e.message);}
@@ -402,11 +448,14 @@ async function saveCurrentEstimate(){
 
 async function saveCartEstimate(){
   if(!cart.length){alert('Add items to the cart first');return;}
+  const pn=requireProjectNumber();
+  if(!pn) return;
   const client=(document.getElementById('cartClientName')?.value||'').trim();
   const t=cartTotals();
   const title=client?`Quote — ${client}`:`Quote — ${cart.length} item${cart.length>1?'s':''}`;
   const body={
     title,
+    project_number:pn,
     mid_price:t.mid,
     range_min:t.lo,
     range_max:t.hi,
@@ -414,6 +463,7 @@ async function saveCartEstimate(){
     payload:{
       kind:'cart',
       client_name:client||null,
+      project_number:pn,
       company:'Fast Glass & Windows',
       phone:'213-566-8886',
       items:cart.map(it=>({
@@ -427,19 +477,153 @@ async function saveCartEstimate(){
     },
   };
   try{
-    const saved=await postEstimate(body, document.getElementById('saveCartBtn'), '✅ Quote saved');
+    const saved=await postEstimate(body, document.getElementById('saveCartBtn'), editingEstimateId?'✅ Quote updated':'✅ Quote saved');
     if(saved?.id){
+      await loadRecentQuotes();
+      if(editingEstimateId){location.href='/portal?id='+saved.id;return;}
       if(confirm('Quote saved to My estimates. Open proposal?')) location.href='/portal?id='+saved.id;
     }
   }catch(e){alert(e.message);}
 }
 
+function renderRecentQuotes(items){
+  const box=document.getElementById('savedQuotesList');
+  if(!box) return;
+  if(!items.length){
+    box.innerHTML='<div class="text-slate-400">No saved quotes yet.</div>';
+    return;
+  }
+  box.innerHTML=items.slice(0,8).map(e=>`
+    <button type="button" data-edit="${e.id}" class="w-full text-left rounded-lg border border-slate-200 px-2.5 py-2 hover:border-blue-400 hover:bg-blue-50 transition">
+      <div class="flex justify-between gap-2">
+        <span class="font-semibold text-slate-800">${escHtml(e.project_number||'—')}</span>
+        <span class="text-[10px] uppercase ${e.status==='signed'?'text-emerald-600':'text-blue-600'}">${e.status==='signed'?'signed':'unsigned'}</span>
+      </div>
+      <div class="truncate text-slate-500">${escHtml(e.title||'')}</div>
+      <div class="text-slate-700 font-medium">$${(e.mid_price||0).toLocaleString()}</div>
+    </button>`).join('');
+  box.querySelectorAll('[data-edit]').forEach(btn=>{
+    btn.onclick=()=>{location.href='/?edit='+btn.dataset.edit;};
+  });
+}
+function escHtml(s){const d=document.createElement('div');d.textContent=s??'';return d.innerHTML;}
+
+async function loadRecentQuotes(){
+  const tok=sessionStorage.getItem(TOKEN_KEY)||'';
+  const box=document.getElementById('savedQuotesList');
+  if(!tok){if(box) box.textContent='Sign in to load recent quotes.';return;}
+  try{
+    const items=await fetch(API+'/api/estimates?mine=1',{headers:{Authorization:`Bearer ${tok}`}}).then(r=>{if(!r.ok)throw 0;return r.json();});
+    renderRecentQuotes(items);
+  }catch{
+    if(box) box.textContent='Could not load quotes.';
+  }
+}
+
+async function findQuotesByProject(){
+  const pn=(document.getElementById('findProjectInput')?.value||document.getElementById('projectNumberInput')?.value||'').trim();
+  if(!pn){alert('Enter a project number to find');return;}
+  const tok=sessionStorage.getItem(TOKEN_KEY)||'';
+  if(!tok){location.href='/login';return;}
+  try{
+    const items=await fetch(API+'/api/estimates?project_number='+encodeURIComponent(pn),{headers:{Authorization:`Bearer ${tok}`}}).then(async r=>{
+      const j=await r.json().catch(()=>({}));
+      if(!r.ok) throw new Error(j.detail||'Find failed');
+      return j;
+    });
+    if(!items.length){alert('No quotes with that project number');return;}
+    renderRecentQuotes(items);
+    document.getElementById('projectNumberInput').value=pn;
+  }catch(e){alert(e.message);}
+}
+
+async function loadEstimateForEdit(id){
+  const tok=sessionStorage.getItem(TOKEN_KEY)||'';
+  if(!tok){location.href='/login?next=/'+encodeURIComponent('?edit='+id);return;}
+  const est=await fetch(API+'/api/estimates/'+id,{headers:{Authorization:`Bearer ${tok}`}}).then(async r=>{
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(j.detail||'Could not load quote');
+    return j;
+  });
+  if(est.status==='signed'){alert('Signed quotes cannot be edited');location.href='/portal?id='+id;return;}
+  editingEstimateId=est.id;
+  showEditBanner(est.id);
+  const p=est.payload||{};
+  if(document.getElementById('notes')) document.getElementById('notes').value=est.notes||'';
+  if(document.getElementById('cartClientName')) document.getElementById('cartClientName').value=p.client_name||'';
+  if(document.getElementById('projectNumberInput')) document.getElementById('projectNumberInput').value=est.project_number||p.project_number||'';
+
+  if(p.kind==='cart' || (Array.isArray(p.items) && p.items.length)){
+    cart=(p.items||[]).map(it=>({
+      label:it.label||'Item',
+      midPrice:Number(it.mid_price??it.midPrice||0),
+      rangeMin:Number(it.range_min??it.rangeMin||0),
+      rangeMax:Number(it.range_max??it.rangeMax||0),
+      area:Number(it.area||0),
+      qty:Number(it.qty||1),
+    }));
+    renderCart();
+    document.getElementById('cartArea')?.scrollIntoView({behavior:'smooth',block:'nearest'});
+    return;
+  }
+
+  // Single glass / product estimate
+  const productId=p.product_id;
+  if(productId){
+    let catObj=null, prodMeta=null;
+    for(const c of cats){
+      const hit=(c.products||[]).find(x=>x.id===productId);
+      if(hit){catObj=c;prodMeta=hit;break;}
+    }
+    if(catObj){
+      const catBtn=[...document.querySelectorAll('#catGrid .pill')].find(b=>b.textContent.includes((catObj.category_label||'').split(' ').slice(-1)[0]?.slice(0,4)||'___'));
+      // Prefer selecting via category index
+      const catIdx=cats.indexOf(catObj);
+      const pills=[...document.querySelectorAll('#catGrid .pill')];
+      if(pills[catIdx]) selCat(catObj, pills[catIdx]);
+      await new Promise(r=>setTimeout(r,50));
+      const prodBtn=[...document.querySelectorAll('#prodGrid .card-sel')].find(b=>b.textContent.includes(prodMeta.label.split(' ')[0]));
+      // Load product directly
+      const d=await fj(`/api/products/${productId}`);
+      prod=d;
+      opts={...(p.options||{})};
+      (d.fields||[]).forEach(f=>{if(opts[f.id]==null && f.default)opts[f.id]=f.default;});
+      document.querySelectorAll('#prodGrid .card-sel').forEach(b=>{
+        b.classList.toggle('on', (b.textContent||'').includes(d.label.split(' ')[0]));
+      });
+      renderOpts();
+      const isHw = prod.is_flat_price || prod.category==='hardware';
+      document.getElementById('dimSection').style.display=isHw?'none':'block';
+      document.getElementById('hwQtySection').style.display=isHw?'block':'none';
+      document.getElementById('jobSection').style.display='block';
+    }
+  }
+  if(p.dims){
+    if(p.dims.w!=null) document.getElementById('wIn').value=p.dims.w;
+    if(p.dims.wFrac!=null) document.getElementById('wFrac').value=p.dims.wFrac;
+    if(p.dims.h!=null) document.getElementById('hIn').value=p.dims.h;
+    if(p.dims.hFrac!=null) document.getElementById('hFrac').value=p.dims.hFrac;
+    if(p.dims.zip) document.getElementById('zip').value=p.dims.zip;
+  }
+  if(p.state){
+    state={floor:p.state.floor||1, techs:p.state.techs||1, urgency:p.state.urgency||'normal'};
+    // sync job option buttons if present
+    document.querySelectorAll('[onclick*="setOpt(\'floor\'"]').forEach(b=>b.classList.toggle('on', b.getAttribute('onclick').includes(`'${state.floor}'`)||b.getAttribute('onclick').includes(`,${state.floor},`)));
+  }
+  sched();
+}
+
 async function init(){
   await initAuth();
+  document.getElementById('findProjectBtn')?.addEventListener('click', findQuotesByProject);
+  document.getElementById('findProjectInput')?.addEventListener('keydown', e=>{if(e.key==='Enter') findQuotesByProject();});
+  await loadRecentQuotes();
   try{
     cats=await fj('/api/products');
     renderCats();
     bindDims();
+    const editId=new URLSearchParams(location.search).get('edit');
+    if(editId) await loadEstimateForEdit(editId);
   }catch(e){
     document.getElementById('catGrid').innerHTML='<div class="col-span-4 text-red-500 text-xs p-1">Server offline</div>';
   }

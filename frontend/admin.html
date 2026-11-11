@@ -159,6 +159,7 @@
       <button class="tab-btn text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600" data-tab="settings">Settings</button>
       <button class="tab-btn text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600" data-tab="users">Users</button>
       <button class="tab-btn text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600" data-tab="estimates">All estimates</button>
+      <button class="tab-btn text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600" data-tab="audit">Quote audit</button>
       <a href="/portal" class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:text-blue-600">My portal</a>
     </div>
   </header>
@@ -251,6 +252,30 @@
         <div class="px-3 py-2 border-b bg-slate-50 text-xs text-slate-500">All staff estimates (superadmin view)</div>
         <div id="estimatesList" class="divide-y divide-slate-100"></div>
         <p id="estimatesEmpty" class="hidden text-center text-sm text-slate-400 py-8">No estimates yet.</p>
+      </div>
+    </div>
+
+    <!-- AUDIT TAB -->
+    <div id="tabAudit" class="hidden">
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-3 py-2 border-b bg-slate-50 text-xs text-slate-500">Quote audit log — create / update / sign / delete (who, when, project #)</div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead>
+              <tr class="bg-slate-50 border-b text-left text-[10px] uppercase text-slate-500">
+                <th class="px-3 py-2">When</th>
+                <th class="px-3 py-2">Action</th>
+                <th class="px-3 py-2">Project #</th>
+                <th class="px-3 py-2">Quote ID</th>
+                <th class="px-3 py-2">Title</th>
+                <th class="px-3 py-2">Status change</th>
+                <th class="px-3 py-2">By</th>
+              </tr>
+            </thead>
+            <tbody id="auditBody"></tbody>
+          </table>
+        </div>
+        <p id="auditEmpty" class="hidden text-center text-sm text-slate-400 py-8">No audit events yet.</p>
       </div>
     </div>
 
@@ -375,10 +400,29 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.getElementById('tabSettings').classList.toggle('hidden', tab !== 'settings');
     document.getElementById('tabUsers').classList.toggle('hidden', tab !== 'users');
     document.getElementById('tabEstimates').classList.toggle('hidden', tab !== 'estimates');
+    document.getElementById('tabAudit').classList.toggle('hidden', tab !== 'audit');
     if (tab === 'users') loadUsers();
     if (tab === 'estimates') loadEstimates();
+    if (tab === 'audit') loadAudit();
   });
 });
+
+async function loadAudit() {
+  const rows = await api('/api/estimates/audit?limit=200');
+  document.getElementById('auditEmpty').classList.toggle('hidden', rows.length > 0);
+  document.getElementById('auditBody').innerHTML = rows.map(a => {
+    const st = [a.status_before, a.status_after].filter(Boolean).join(' → ') || '—';
+    return `<tr class="border-b border-slate-100">
+      <td class="px-3 py-2 text-slate-500 whitespace-nowrap">${esc((a.created_at || '').replace('T', ' ').slice(0, 19))}</td>
+      <td class="px-3 py-2 font-semibold">${esc(a.action)}</td>
+      <td class="px-3 py-2">${esc(a.project_number || '—')}</td>
+      <td class="px-3 py-2">${a.estimate_id ?? '—'}</td>
+      <td class="px-3 py-2 max-w-[180px] truncate">${esc(a.title_snapshot || '')}</td>
+      <td class="px-3 py-2">${esc(st)}</td>
+      <td class="px-3 py-2">${esc(a.actor_user_id || '')}</td>
+    </tr>`;
+  }).join('');
+}
 
 async function loadUsers() {
   const users = await api('/api/admin/users');
@@ -425,8 +469,8 @@ async function loadEstimates() {
   box.innerHTML = items.map(e => `
     <div class="px-3 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
       <div>
-        <div class="text-sm font-medium text-slate-800">${esc(e.title)} <span class="text-[10px] uppercase text-slate-400">${esc(e.status)}</span></div>
-        <div class="text-[11px] text-slate-500">${esc(e.owner.display_name || e.owner.user_id)} · ${esc(e.owner.email)} · ${esc(e.created_at || '')}</div>
+        <div class="text-sm font-medium text-slate-800"><span class="text-slate-500 mr-1">#${esc(e.project_number || '—')}</span>${esc(e.title)} <span class="text-[10px] uppercase text-slate-400">${esc(e.status === 'signed' ? 'signed' : 'unsigned')}</span></div>
+        <div class="text-[11px] text-slate-500">ID ${e.id} · ${esc(e.owner.display_name || e.owner.user_id)} · ${esc(e.owner.email)} · ${esc(e.created_at || '')}</div>
       </div>
       <div class="text-sm font-semibold text-blue-600">$${Number(e.mid_price || 0).toLocaleString()} <span class="text-xs font-normal text-slate-400">(${Number(e.range_min||0).toLocaleString()}–${Number(e.range_max||0).toLocaleString()})</span></div>
     </div>`).join('');

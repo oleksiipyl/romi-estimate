@@ -112,6 +112,7 @@ class CreateUserRequest(BaseModel):
 
 class SaveEstimateRequest(BaseModel):
     title: str = "Estimate"
+    project_number: str = Field(..., min_length=1, max_length=64, description="Household / job estimate ID")
     mid_price: Optional[float] = None
     range_min: Optional[float] = None
     range_max: Optional[float] = None
@@ -497,11 +498,25 @@ def admin_create_user(
 @app.get("/api/estimates")
 def list_estimates(
     mine: bool = False,
+    status: Optional[str] = None,
+    project_number: Optional[str] = None,
     authorization: Optional[str] = Header(None),
     x_admin_token: Optional[str] = Header(None),
 ):
     user = require_user(authorization, x_admin_token)
-    return estimates_store.list_estimates(user, mine_only=mine)
+    if project_number:
+        return estimates_store.find_by_project_number(project_number, user)
+    return estimates_store.list_estimates(user, mine_only=mine, status=status)
+
+
+@app.get("/api/estimates/audit")
+def list_estimate_audit(
+    limit: int = 100,
+    authorization: Optional[str] = Header(None),
+    x_admin_token: Optional[str] = Header(None),
+):
+    user = require_user(authorization, x_admin_token)
+    return estimates_store.list_audit_log(user, limit=limit)
 
 
 @app.post("/api/estimates")
@@ -511,15 +526,20 @@ def save_estimate(
     x_admin_token: Optional[str] = Header(None),
 ):
     user = require_user(authorization, x_admin_token)
-    return estimates_store.create_estimate(
-        user_pk=user["id"],
-        title=req.title,
-        payload=req.payload or {},
-        mid_price=req.mid_price,
-        range_min=req.range_min,
-        range_max=req.range_max,
-        notes=req.notes,
-    )
+    try:
+        return estimates_store.create_estimate(
+            user_pk=user["id"],
+            title=req.title,
+            payload=req.payload or {},
+            mid_price=req.mid_price,
+            range_min=req.range_min,
+            range_max=req.range_max,
+            notes=req.notes,
+            project_number=req.project_number,
+            actor=user,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.get("/api/estimates/{estimate_id}")
@@ -546,6 +566,49 @@ def sign_estimate(
     if not row:
         raise HTTPException(status_code=404, detail="Estimate not found")
     return row
+
+
+@app.put("/api/estimates/{estimate_id}")
+def update_estimate(
+    estimate_id: int,
+    req: SaveEstimateRequest,
+    authorization: Optional[str] = Header(None),
+    x_admin_token: Optional[str] = Header(None),
+):
+    user = require_user(authorization, x_admin_token)
+    try:
+        row = estimates_store.update_estimate(
+            estimate_id,
+            user,
+            title=req.title,
+            payload=req.payload or {},
+            mid_price=req.mid_price,
+            range_min=req.range_min,
+            range_max=req.range_max,
+            notes=req.notes,
+            project_number=req.project_number,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    if not row:
+        raise HTTPException(status_code=404, detail="Estimate not found")
+    return row
+
+
+@app.delete("/api/estimates/{estimate_id}")
+def delete_estimate(
+    estimate_id: int,
+    authorization: Optional[str] = Header(None),
+    x_admin_token: Optional[str] = Header(None),
+):
+    user = require_user(authorization, x_admin_token)
+    try:
+        ok = estimates_store.delete_estimate(estimate_id, user)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    if not ok:
+        raise HTTPException(status_code=404, detail="Estimate not found")
+    return {"ok": True}
 
 
 @app.get("/api/admin/services")

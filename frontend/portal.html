@@ -9,20 +9,24 @@
     body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(180deg,#f8fafc,#f1f5f9)}
     .card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
     .badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;text-transform:uppercase}
-    .badge.saved{background:#eff6ff;color:#1d4ed8}
+    .badge.saved,.badge.unsigned{background:#eff6ff;color:#1d4ed8}
     .badge.signed{background:#ecfdf5;color:#047857}
+    .badge.deleted{background:#fef2f2;color:#b91c1c}
+    .filter-btn.on{background:#0f172a;color:#fff;border-color:#0f172a}
+    tr.quote-row{cursor:pointer}
+    tr.quote-row:hover{background:#f8fafc}
     @media print {
       body{background:#fff}
       header, .no-print { display:none !important; }
       #proposalView { display:block !important; }
-      #listView { display:none !important; }
+      #listView, #auditView { display:none !important; }
       .proposal-sheet { box-shadow:none; border:none; }
     }
   </style>
 </head>
 <body class="min-h-screen pb-10">
 <header class="bg-white/95 border-b border-slate-200 sticky top-0 z-20 no-print">
-  <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
+  <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
     <div>
       <h1 class="text-sm font-bold text-slate-900">My Estimates</h1>
       <p id="who" class="text-[11px] text-slate-500">…</p>
@@ -35,23 +39,76 @@
   </div>
 </header>
 
-<main class="max-w-5xl mx-auto px-4 pt-4 space-y-3">
+<main class="max-w-6xl mx-auto px-4 pt-4 space-y-3">
   <div id="listView">
-    <div class="card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 no-print">
-      <p class="text-sm text-slate-600">Save a full cart as one quote from the calculator, then open a proposal to print or share.</p>
-      <a href="/" class="inline-flex justify-center bg-blue-600 text-white text-sm font-semibold rounded-lg px-4 py-2">New calculation</a>
+    <div class="card p-4 no-print space-y-3">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <p class="text-sm text-slate-600">Table of saved quotes. Click a row to open details — edit, print, sign, or delete unsigned quotes.</p>
+        <a href="/" class="inline-flex justify-center bg-blue-600 text-white text-sm font-semibold rounded-lg px-4 py-2">New calculation</a>
+      </div>
+      <div class="flex flex-wrap gap-2 items-center">
+        <button type="button" class="filter-btn on text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200" data-filter="all">All</button>
+        <button type="button" class="filter-btn text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200" data-filter="unsigned">Unsigned</button>
+        <button type="button" class="filter-btn text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200" data-filter="signed">Signed</button>
+        <button type="button" id="showAuditBtn" class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 ml-auto">Audit log</button>
+      </div>
     </div>
-    <div id="list" class="space-y-3"></div>
-    <p id="empty" class="hidden text-center text-sm text-slate-400 py-10">No saved estimates yet. On the calculator, add items to the quote cart and tap <strong>Save quote</strong>.</p>
+
+    <div class="card overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="bg-slate-50 border-b border-slate-200 text-left text-[10px] uppercase tracking-wide text-slate-500">
+              <th class="px-3 py-2.5 font-semibold">Project #</th>
+              <th class="px-3 py-2.5 font-semibold">ID</th>
+              <th class="px-3 py-2.5 font-semibold">Title</th>
+              <th class="px-3 py-2.5 font-semibold">Status</th>
+              <th class="px-3 py-2.5 font-semibold text-right">Total</th>
+              <th class="px-3 py-2.5 font-semibold">Updated</th>
+            </tr>
+          </thead>
+          <tbody id="quotesBody"></tbody>
+        </table>
+      </div>
+      <p id="empty" class="hidden text-center text-sm text-slate-400 py-10">No saved estimates yet. Save a quote from the calculator with a project number.</p>
+    </div>
   </div>
 
   <div id="proposalView" class="hidden">
     <div class="no-print flex flex-wrap gap-2 mb-3">
-      <button type="button" id="backListBtn" class="border border-slate-200 rounded-lg px-3 py-2 text-xs font-semibold text-slate-600">← Back to list</button>
+      <button type="button" id="backListBtn" class="border border-slate-200 rounded-lg px-3 py-2 text-xs font-semibold text-slate-600">← Back to table</button>
+      <button type="button" id="editBtn" class="hidden bg-blue-600 text-white rounded-lg px-3 py-2 text-xs font-semibold">Edit in calculator</button>
       <button type="button" id="printBtn" class="bg-slate-900 text-white rounded-lg px-3 py-2 text-xs font-semibold">🖨 Print / Save PDF</button>
       <button type="button" id="signBtn" class="hidden bg-emerald-600 text-white rounded-lg px-3 py-2 text-xs font-semibold">Sign quote</button>
+      <button type="button" id="deleteBtn" class="hidden border border-red-200 text-red-600 rounded-lg px-3 py-2 text-xs font-semibold">Delete</button>
     </div>
     <article id="proposalSheet" class="proposal-sheet card p-6 md:p-8 bg-white"></article>
+  </div>
+
+  <div id="auditView" class="hidden">
+    <div class="no-print flex flex-wrap gap-2 mb-3">
+      <button type="button" id="backFromAuditBtn" class="border border-slate-200 rounded-lg px-3 py-2 text-xs font-semibold text-slate-600">← Back to table</button>
+    </div>
+    <div class="card overflow-hidden">
+      <div class="px-3 py-2 border-b bg-slate-50 text-xs text-slate-500">Quote audit — creates, updates, signs, deletions</div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-xs">
+          <thead>
+            <tr class="bg-slate-50 border-b text-left text-[10px] uppercase text-slate-500">
+              <th class="px-3 py-2">When</th>
+              <th class="px-3 py-2">Action</th>
+              <th class="px-3 py-2">Project #</th>
+              <th class="px-3 py-2">Quote ID</th>
+              <th class="px-3 py-2">Title</th>
+              <th class="px-3 py-2">Status</th>
+              <th class="px-3 py-2">By</th>
+            </tr>
+          </thead>
+          <tbody id="auditBody"></tbody>
+        </table>
+      </div>
+      <p id="auditEmpty" class="hidden text-center text-sm text-slate-400 py-8">No audit events yet.</p>
+    </div>
   </div>
 </main>
 
@@ -63,25 +120,36 @@ const PHONE='213-566-8886';
 let token=sessionStorage.getItem(TOKEN_KEY)||'';
 let me=null;
 let current=null;
+let allItems=[];
+let statusFilter='all';
 
 async function api(path,opts={}){
   const r=await fetch(path,{...opts,headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`,...(opts.headers||{})}});
   if(r.status===401){location.href='/login';throw new Error('auth');}
+  if(r.status===204) return null;
   const j=await r.json().catch(()=>({}));
   if(!r.ok)throw new Error(j.detail||`Error ${r.status}`);
   return j;
 }
 function money(n){return n==null?'—':`$${Number(n).toLocaleString()}`;}
 function esc(s){const d=document.createElement('div');d.textContent=s??'';return d.innerHTML;}
+function statusLabel(s){return s==='signed'?'signed':'unsigned';}
 
 function showList(){
   proposalView.classList.add('hidden');
+  auditView.classList.add('hidden');
   listView.classList.remove('hidden');
   history.replaceState({},'', '/portal');
 }
 function showProposal(){
   listView.classList.add('hidden');
+  auditView.classList.add('hidden');
   proposalView.classList.remove('hidden');
+}
+function showAudit(){
+  listView.classList.add('hidden');
+  proposalView.classList.add('hidden');
+  auditView.classList.remove('hidden');
 }
 
 function proposalItems(est){
@@ -121,9 +189,10 @@ function renderProposal(est){
         <div class="text-sm font-semibold text-blue-700 mt-2">${esc(phone)}</div>
       </div>
       <div class="text-sm text-slate-600 sm:text-right">
-        <div><span class="text-slate-400">Quote #</span> ${est.id}</div>
+        <div><span class="text-slate-400">Project #</span> <strong>${esc(est.project_number||'—')}</strong></div>
+        <div><span class="text-slate-400">Internal ID</span> ${est.id}</div>
         <div><span class="text-slate-400">Date</span> ${esc((est.created_at||'').slice(0,10))}</div>
-        <div><span class="text-slate-400">Status</span> ${esc(est.status)}</div>
+        <div><span class="text-slate-400">Status</span> ${esc(statusLabel(est.status))}</div>
         <div class="mt-1 text-xs">Prepared by ${esc(est.owner?.display_name||est.owner?.user_id||'')}</div>
       </div>
     </header>
@@ -158,65 +227,93 @@ function renderProposal(est){
       ${est.signed_at?`<p class="text-emerald-700 font-semibold">Signed ${esc(est.signed_at)} by ${esc(est.signed_by_user_id||'')}</p>`:''}
     </footer>`;
 
-  signBtn.classList.toggle('hidden', est.status==='signed');
+  const unsigned=est.status!=='signed';
+  editBtn.classList.toggle('hidden', !unsigned);
+  signBtn.classList.toggle('hidden', !unsigned);
+  deleteBtn.classList.toggle('hidden', !unsigned);
+  editBtn.onclick=()=>{location.href='/?edit='+est.id;};
   signBtn.onclick=async()=>{
     signBtn.disabled=true;
     try{
-      const updated=await api(`/api/estimates/${est.id}/sign`,{method:'POST'});
-      // reload full payload
+      await api(`/api/estimates/${est.id}/sign`,{method:'POST'});
       const full=await api(`/api/estimates/${est.id}`);
       renderProposal(full);
       await loadList();
     }catch(e){alert(e.message);signBtn.disabled=false;}
   };
+  deleteBtn.onclick=async()=>{
+    if(!confirm(`Delete unsigned quote #${est.project_number||est.id}? This is logged in the audit trail.`)) return;
+    try{
+      await api(`/api/estimates/${est.id}`,{method:'DELETE'});
+      await loadList();
+      showList();
+    }catch(e){alert(e.message);}
+  };
   showProposal();
   history.replaceState({},'', '/portal?id='+est.id);
 }
 
-function renderList(items){
-  empty.classList.toggle('hidden', items.length>0);
-  list.innerHTML=items.map(e=>`
-    <div class="card p-4">
-      <div class="flex items-start justify-between gap-3">
-        <div class="min-w-0">
-          <div class="flex items-center gap-2 mb-1 flex-wrap">
-            <h2 class="text-sm font-semibold text-slate-900 truncate">${esc(e.title)}</h2>
-            <span class="badge ${e.status}">${e.status}</span>
-          </div>
-          <p class="text-xs text-slate-500">${esc(e.owner.display_name||e.owner.user_id)} · ${esc(e.created_at||'')}</p>
-          <p class="text-lg font-bold text-blue-600 mt-2">${money(e.mid_price)}</p>
-          <p class="text-xs text-slate-500">Range ${money(e.range_min)} – ${money(e.range_max)}</p>
-        </div>
-        <div class="flex flex-col gap-2 no-print">
-          <button data-open="${e.id}" class="text-xs font-semibold bg-slate-900 text-white rounded-lg px-3 py-2">Open proposal</button>
-          ${e.status!=='signed'?`<button data-sign="${e.id}" class="text-xs font-semibold bg-emerald-600 text-white rounded-lg px-3 py-2">Sign</button>`:''}
-        </div>
-      </div>
-    </div>`).join('');
+function filteredItems(){
+  if(statusFilter==='signed') return allItems.filter(e=>e.status==='signed');
+  if(statusFilter==='unsigned') return allItems.filter(e=>e.status!=='signed');
+  return allItems;
+}
 
-  list.querySelectorAll('[data-open]').forEach(btn=>{
-    btn.onclick=async()=>{
+function renderTable(){
+  const items=filteredItems();
+  empty.classList.toggle('hidden', items.length>0);
+  quotesBody.innerHTML=items.map(e=>`
+    <tr class="quote-row border-b border-slate-100" data-id="${e.id}">
+      <td class="px-3 py-3 font-semibold text-slate-900">${esc(e.project_number||'—')}</td>
+      <td class="px-3 py-3 text-slate-500">${e.id}</td>
+      <td class="px-3 py-3 text-slate-800 max-w-[220px] truncate" title="${esc(e.title)}">${esc(e.title)}</td>
+      <td class="px-3 py-3"><span class="badge ${statusLabel(e.status)}">${statusLabel(e.status)}</span></td>
+      <td class="px-3 py-3 text-right font-semibold text-blue-700">${money(e.mid_price)}</td>
+      <td class="px-3 py-3 text-slate-400 whitespace-nowrap">${esc((e.updated_at||e.created_at||'').replace('T',' ').slice(0,16))}</td>
+    </tr>`).join('');
+  quotesBody.querySelectorAll('tr.quote-row').forEach(tr=>{
+    tr.onclick=async()=>{
       try{
-        const est=await api(`/api/estimates/${btn.dataset.open}`);
+        const est=await api(`/api/estimates/${tr.dataset.id}`);
         renderProposal(est);
       }catch(e){alert(e.message);}
-    };
-  });
-  list.querySelectorAll('[data-sign]').forEach(btn=>{
-    btn.onclick=async()=>{
-      btn.disabled=true;
-      try{await api(`/api/estimates/${btn.dataset.sign}/sign`,{method:'POST'});await loadList();}
-      catch(e){alert(e.message);btn.disabled=false;}
     };
   });
 }
 
 async function loadList(){
-  const items=await api('/api/estimates?mine=1');
-  renderList(items);
-  return items;
+  allItems=await api('/api/estimates?mine=1');
+  renderTable();
+  return allItems;
 }
 
+async function loadAudit(){
+  const rows=await api('/api/estimates/audit?limit=200');
+  auditEmpty.classList.toggle('hidden', rows.length>0);
+  auditBody.innerHTML=rows.map(a=>{
+    const st=[a.status_before,a.status_after].filter(Boolean).join(' → ')||'—';
+    return `<tr class="border-b border-slate-100">
+      <td class="px-3 py-2 text-slate-500 whitespace-nowrap">${esc((a.created_at||'').replace('T',' ').slice(0,19))}</td>
+      <td class="px-3 py-2 font-semibold">${esc(a.action)}</td>
+      <td class="px-3 py-2">${esc(a.project_number||'—')}</td>
+      <td class="px-3 py-2">${a.estimate_id??'—'}</td>
+      <td class="px-3 py-2 max-w-[180px] truncate">${esc(a.title_snapshot||'')}</td>
+      <td class="px-3 py-2">${esc(st)}</td>
+      <td class="px-3 py-2">${esc(a.actor_user_id||'')}</td>
+    </tr>`;
+  }).join('');
+}
+
+document.querySelectorAll('.filter-btn').forEach(btn=>{
+  btn.onclick=()=>{
+    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on');
+    statusFilter=btn.dataset.filter;
+    renderTable();
+  };
+});
+showAuditBtn.onclick=async()=>{await loadAudit();showAudit();};
+backFromAuditBtn.onclick=()=>showList();
 backListBtn.onclick=()=>showList();
 printBtn.onclick=()=>window.print();
 logoutBtn.onclick=async()=>{
